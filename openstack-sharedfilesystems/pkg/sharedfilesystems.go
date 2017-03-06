@@ -7,10 +7,11 @@ import (
 
 	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/shares"
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/pkg/api/resource"
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/types"
+	"k8s.io/kubernetes/pkg/util/sets"
+	"k8s.io/kubernetes/pkg/volume"
 )
 
 // TO BE DELETED after the below function(s) are merged into k8s
@@ -86,9 +87,14 @@ func prepareCreateRequest(options controller.VolumeOptions) (shares.CreateOpts, 
 	}
 
 	// optional parameter
-	for index, _ := range options.Parameters {
+	for index, value := range options.Parameters {
 		switch strings.ToLower(index) {
 		case ZonesSCParamName:
+			if setOfZones, err := zonesToSet(value); err != nil {
+				return request, err
+			} else {
+				request.AvailabilityZone = volume.ChooseZoneForVolume(setOfZones, options.PVC.Name)
+			}
 		default:
 			return request, fmt.Errorf("invalid parameter %q", "foo")
 		}

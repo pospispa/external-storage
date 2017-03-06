@@ -6,6 +6,7 @@ import (
 
 	"k8s.io/client-go/pkg/api/resource"
 	"k8s.io/client-go/pkg/api/v1"
+	"k8s.io/kubernetes/pkg/volume"
 
 	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/shares"
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
@@ -13,6 +14,10 @@ import (
 
 func TestPrepareCreateRequest(t *testing.T) {
 	functionUnderTest := "prepareCreateRequestv2"
+	zonesForSCMultiZoneTestCase := "nova1, nova2, nova3"
+	setOfZonesForSCMultiZoneTestCase, _ := zonesToSet(zonesForSCMultiZoneTestCase)
+	pvcNameForSCMultiZoneTestCase := "pvc"
+	expectedResultForSCMultiZoneTestCase := volume.ChooseZoneForVolume(setOfZonesForSCMultiZoneTestCase, pvcNameForSCMultiZoneTestCase)
 	// First part: want no error
 	succCases := []struct {
 		volumeOptions controller.VolumeOptions
@@ -87,6 +92,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 				Size:             2,
 			},
 		},
+		// Will very probably start failing if the func volume.ChooseZoneForVolume is replaced by another function in the implementation
 		{
 			volumeOptions: controller.VolumeOptions{
 				PersistentVolumeReclaimPolicy: "Delete",
@@ -101,12 +107,12 @@ func TestPrepareCreateRequest(t *testing.T) {
 						},
 					},
 				},
-				Parameters: map[string]string{ZonesSCParamName: "nova1, nova2, nova3"},
+				Parameters: map[string]string{ZonesSCParamName: zonesForSCMultiZoneTestCase},
 			},
 			storageSize: "2G",
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
-				AvailabilityZone: "nova1",
+				AvailabilityZone: expectedResultForSCMultiZoneTestCase,
 				Size:             2,
 			},
 		},
