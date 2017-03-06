@@ -57,6 +57,8 @@ import:
   subpackages:
   - pkg/cloudprovider
   - pkg/util/goroutinemap
+  - pkg/util/sets
+  - pkg/volume
 testImport:
 - package: github.com/opencontainers/runc
   subpackages:

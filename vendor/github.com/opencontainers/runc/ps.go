@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/urfave/cli"
@@ -19,11 +20,14 @@ var psCommand = cli.Command{
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "format, f",
-			Value: "",
+			Value: "table",
 			Usage: `select one of: ` + formatOptions,
 		},
 	},
 	Action: func(context *cli.Context) error {
+		if err := checkArgs(context, 1, minArgs); err != nil {
+			return err
+		}
 		container, err := getContainer(context)
 		if err != nil {
 			return err
@@ -34,16 +38,12 @@ var psCommand = cli.Command{
 			return err
 		}
 
-		if context.String("format") == "json" {
-			if err := json.NewEncoder(os.Stdout).Encode(pids); err != nil {
-				return err
-			}
-			return nil
-		}
-
-		pidlist := []string{}
-		for _, pid := range pids {
-			pidlist = append(pidlist, fmt.Sprintf("%d", pid))
+		switch context.String("format") {
+		case "table":
+		case "json":
+			return json.NewEncoder(os.Stdout).Encode(pids)
+		default:
+			return fmt.Errorf("invalid format option")
 		}
 
 		// [1:] is to remove command name, ex:
@@ -52,17 +52,53 @@ var psCommand = cli.Command{
 		//
 		psArgs := context.Args()[1:]
 		if len(psArgs) == 0 {
-			psArgs = []string{"-f"}
+			psArgs = []string{"-ef"}
 		}
 
-		psArgs = append(psArgs, "-p", strings.Join(pidlist, ","))
-		output, err := exec.Command("ps", psArgs...).Output()
+		cmd := exec.Command("ps", psArgs...)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("%s: %s", err, output)
+		}
+
+		lines := strings.Split(string(output), "\n")
+		pidIndex, err := getPidIndex(lines[0])
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf(string(output))
+		fmt.Println(lines[0])
+		for _, line := range lines[1:] {
+			if len(line) == 0 {
+				continue
+			}
+			fields := strings.Fields(line)
+			p, err := strconv.Atoi(fields[pidIndex])
+			if err != nil {
+				return fmt.Errorf("unexpected pid '%s': %s", fields[pidIndex], err)
+			}
+
+			for _, pid := range pids {
+				if pid == p {
+					fmt.Println(line)
+					break
+				}
+			}
+		}
 		return nil
 	},
 	SkipArgReorder: true,
+}
+
+func getPidIndex(title string) (int, error) {
+	titles := strings.Fields(title)
+
+	pidIndex := -1
+	for i, name := range titles {
+		if name == "PID" {
+			return i, nil
+		}
+	}
+
+	return pidIndex, fmt.Errorf("couldn't find PID field in ps output")
 }

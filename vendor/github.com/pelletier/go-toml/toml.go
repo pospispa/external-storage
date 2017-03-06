@@ -10,13 +10,13 @@ import (
 )
 
 type tomlValue struct {
-	value    interface{}
+	value    interface{} // string, int64, uint64, float64, bool, time.Time, [] of any of this list
 	position Position
 }
 
 // TomlTree is the result of the parsing of a TOML file.
 type TomlTree struct {
-	values   map[string]interface{}
+	values   map[string]interface{} // string -> *tomlValue, *TomlTree, []*TomlTree
 	position Position
 }
 
@@ -222,9 +222,6 @@ func (t *TomlTree) SetPath(keys []string, value interface{}) {
 func (t *TomlTree) createSubTree(keys []string, pos Position) error {
 	subtree := t
 	for _, intermediateKey := range keys {
-		if intermediateKey == "" {
-			return fmt.Errorf("empty intermediate table")
-		}
 		nextTree, exists := subtree.values[intermediateKey]
 		if !exists {
 			tree := newTomlTree()
