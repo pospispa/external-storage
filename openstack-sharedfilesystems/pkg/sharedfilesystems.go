@@ -14,24 +14,6 @@ import (
 	"k8s.io/kubernetes/pkg/volume"
 )
 
-// TO BE DELETED after the below function(s) are merged into k8s
-
-// zonesToSet converts a string containing a comma separated list of zones to set
-func zonesToSet(zonesString string) (sets.String, error) {
-	zonesSlice := strings.Split(zonesString, ",")
-	zonesSet := make(sets.String)
-	for _, zone := range zonesSlice {
-		trimmedZone := strings.TrimSpace(zone)
-		if trimmedZone == "" {
-			return make(sets.String), fmt.Errorf("comma separated list of zones (%q) must not contain an empty zone", zonesString)
-		}
-		zonesSet.Insert(trimmedZone)
-	}
-	return zonesSet, nil
-}
-
-// TO BE DELETED after the above function(s) are merged into k8s
-
 // SharedFilesystemProvisioner is a class representing OpenStack Shared Filesystem external provisioner
 type SharedFilesystemProvisioner struct {
 	// Identity of this SharedFilesystemProvisioner, generated. Used to identify "this" provisioner's PVs.
@@ -75,7 +57,7 @@ func getPVCStorageSize(pvc *v1.PersistentVolumeClaim) (int, error) {
 	}
 }
 
-func prepareCreateRequest(options controller.VolumeOptions) (shares.CreateOpts, error) {
+func prepareCreateRequest(options controller.VolumeOptions, getAllZones func() (sets.String, error)) (shares.CreateOpts, error) {
 	var request shares.CreateOpts
 	// Currently only the NFS shares are supported, that's why the NFS is hardcoded.
 	request.ShareProto = ProtocolNFS
@@ -86,7 +68,8 @@ func prepareCreateRequest(options controller.VolumeOptions) (shares.CreateOpts, 
 		request.Size = storageSize
 	}
 
-	// optional parameter
+	// optional parameters
+	isZonesParam := false
 	for index, value := range options.Parameters {
 		switch strings.ToLower(index) {
 		case ZonesSCParamName:
@@ -94,9 +77,17 @@ func prepareCreateRequest(options controller.VolumeOptions) (shares.CreateOpts, 
 				return request, err
 			} else {
 				request.AvailabilityZone = volume.ChooseZoneForVolume(setOfZones, options.PVC.Name)
+				isZonesParam = true
 			}
 		default:
 			return request, fmt.Errorf("invalid parameter %q", "foo")
+		}
+	}
+	if !isZonesParam {
+		if allAvailableZones, err := getAllZones(); err != nil {
+			return request, err
+		} else {
+			request.AvailabilityZone = volume.ChooseZoneForVolume(allAvailableZones, options.PVC.Name)
 		}
 	}
 	return request, nil

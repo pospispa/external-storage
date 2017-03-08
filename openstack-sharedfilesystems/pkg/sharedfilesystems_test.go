@@ -6,11 +6,17 @@ import (
 
 	"k8s.io/client-go/pkg/api/resource"
 	"k8s.io/client-go/pkg/api/v1"
+	"k8s.io/kubernetes/pkg/util/sets"
 	"k8s.io/kubernetes/pkg/volume"
 
 	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/shares"
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
 )
+
+func mockGetAllZones() (sets.String, error) {
+	ret := sets.String{"nova1": sets.Empty{}, "nova2": sets.Empty{}, "nova3": sets.Empty{}}
+	return ret, nil
+}
 
 func TestPrepareCreateRequest(t *testing.T) {
 	functionUnderTest := "prepareCreateRequestv2"
@@ -18,18 +24,22 @@ func TestPrepareCreateRequest(t *testing.T) {
 	setOfZonesForSCMultiZoneTestCase, _ := zonesToSet(zonesForSCMultiZoneTestCase)
 	pvcNameForSCMultiZoneTestCase := "pvc"
 	expectedResultForSCMultiZoneTestCase := volume.ChooseZoneForVolume(setOfZonesForSCMultiZoneTestCase, pvcNameForSCMultiZoneTestCase)
+	pvcNameForSCNoZonesSpecifiedTestCase := "pvc"
+	allClusterZonesForSCNoZonesSpecifiedTestCase, _ := mockGetAllZones()
+	expectedResultForSCNoZonesSpecifiedTestCase := volume.ChooseZoneForVolume(allClusterZonesForSCNoZonesSpecifiedTestCase, pvcNameForSCNoZonesSpecifiedTestCase)
 	// First part: want no error
 	succCases := []struct {
 		volumeOptions controller.VolumeOptions
 		storageSize   string
 		want          shares.CreateOpts
 	}{
+		// Will very probably start failing if the func volume.ChooseZoneForVolume is replaced by another function in the implementation
 		{
 			volumeOptions: controller.VolumeOptions{
 				PersistentVolumeReclaimPolicy: "Delete",
 				PVName: "pv",
 				PVC: &v1.PersistentVolumeClaim{
-					ObjectMeta: v1.ObjectMeta{Name: "pvc", Namespace: "foo"},
+					ObjectMeta: v1.ObjectMeta{Name: pvcNameForSCNoZonesSpecifiedTestCase, Namespace: "foo"},
 					Spec: v1.PersistentVolumeClaimSpec{
 						Resources: v1.ResourceRequirements{
 							Requests: v1.ResourceList{
@@ -42,8 +52,9 @@ func TestPrepareCreateRequest(t *testing.T) {
 			},
 			storageSize: "2G",
 			want: shares.CreateOpts{
-				ShareProto: ProtocolNFS,
-				Size:       2,
+				ShareProto:       ProtocolNFS,
+				AvailabilityZone: expectedResultForSCNoZonesSpecifiedTestCase,
+				Size:             2,
 			},
 		},
 		{
@@ -98,7 +109,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 				PersistentVolumeReclaimPolicy: "Delete",
 				PVName: "pv",
 				PVC: &v1.PersistentVolumeClaim{
-					ObjectMeta: v1.ObjectMeta{Name: "pvc", Namespace: "foo"},
+					ObjectMeta: v1.ObjectMeta{Name: pvcNameForSCMultiZoneTestCase, Namespace: "foo"},
 					Spec: v1.PersistentVolumeClaimSpec{
 						Resources: v1.ResourceRequirements{
 							Requests: v1.ResourceList{
@@ -116,18 +127,43 @@ func TestPrepareCreateRequest(t *testing.T) {
 				Size:             2,
 			},
 		},
+		// PVC accessModes parameters are being ignored.
+		{
+			volumeOptions: controller.VolumeOptions{
+				PersistentVolumeReclaimPolicy: "Delete",
+				PVName: "pv",
+				PVC: &v1.PersistentVolumeClaim{
+					ObjectMeta: v1.ObjectMeta{Name: "pvc", Namespace: "foo"},
+					Spec: v1.PersistentVolumeClaimSpec{
+						AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadOnlyMany},
+						Resources: v1.ResourceRequirements{
+							Requests: v1.ResourceList{
+								v1.ResourceStorage: resource.Quantity{},
+							},
+						},
+					},
+				},
+				Parameters: map[string]string{ZonesSCParamName: "nova"},
+			},
+			storageSize: "2G",
+			want: shares.CreateOpts{
+				ShareProto:       ProtocolNFS,
+				AvailabilityZone: "nova",
+				Size:             2,
+			},
+		},
 	}
-	for _, succCase := range succCases {
+	for i, succCase := range succCases {
 		if quantity, err := resource.ParseQuantity(succCase.storageSize); err != nil {
-			t.Errorf("Failed to parse storage size (%v): %v", succCase.storageSize, err)
+			t.Errorf("Test case %v: Failed to parse storage size (%v): %v", i, succCase.storageSize, err)
 			continue
 		} else {
 			succCase.volumeOptions.PVC.Spec.Resources.Requests[v1.ResourceStorage] = quantity
 		}
-		if request, err := prepareCreateRequest(succCase.volumeOptions); err != nil {
-			t.Errorf("%v(%v) RETURNED (%v, %v), WANT (%v, %v)", functionUnderTest, succCase.volumeOptions, request, err, succCase.want, nil)
+		if request, err := prepareCreateRequest(succCase.volumeOptions, mockGetAllZones); err != nil {
+			t.Errorf("Test case %v: %v(%v) RETURNED (%v, %v), WANT (%v, %v)", i, functionUnderTest, succCase.volumeOptions, request, err, succCase.want, nil)
 		} else if !reflect.DeepEqual(request, succCase.want) {
-			t.Errorf("%v(%v) RETURNED (%v, %v), WANT (%v, %v)", functionUnderTest, succCase.volumeOptions, request, err, succCase.want, nil)
+			t.Errorf("Test case %v: %v(%v) RETURNED (%v, %v), WANT (%v, %v)", i, functionUnderTest, succCase.volumeOptions, request, err, succCase.want, nil)
 		}
 	}
 
@@ -216,7 +252,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 		} else {
 			errCase.volumeOptions.PVC.Spec.Resources.Requests[v1.ResourceStorage] = quantity
 		}
-		if request, err := prepareCreateRequest(errCase.volumeOptions); err == nil {
+		if request, err := prepareCreateRequest(errCase.volumeOptions, mockGetAllZones); err == nil {
 			t.Errorf("%v(%v) RETURNED (%v, %v), WANT (%v, %v)", functionUnderTest, errCase.volumeOptions, request, err, "N/A", "an error")
 		}
 	}
@@ -249,7 +285,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 		},
 	}
 	for _, errCase := range errCasesStorageSizeNotConfigured {
-		if request, err := prepareCreateRequest(errCase); err == nil {
+		if request, err := prepareCreateRequest(errCase, mockGetAllZones); err == nil {
 			t.Errorf("%v(%v) RETURNED (%v, %v), WANT (%v, %v)", functionUnderTest, errCase, request, err, "N/A", "an error")
 		}
 	}
