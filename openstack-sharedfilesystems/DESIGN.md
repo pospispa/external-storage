@@ -83,7 +83,7 @@ parameters:
   zones: nova1, nova2, nova3
 ```
 Optional parameter(s):
-- `zones` a set of zones; one of the zones will be used as the `availability_zone` in the [Create request](http://developer.openstack.org/api-ref/shared-file-systems/?expanded=create-share-detail#create-share).
+- `zones` a set of zones; one of the zones will be used as the `availability_zone` in the [Create request](http://developer.openstack.org/api-ref/shared-file-systems/?expanded=create-share-detail#create-share). In case the `zones` parameter is not specified the `availability_zone` in the [Create request](http://developer.openstack.org/api-ref/shared-file-systems/?expanded=create-share-detail#create-share) is filled with one of the zones that exist in the cluster.
 
 Unavailable parameter(s):
 - `share_proto` that is a mandatory parameter in the [Create request](http://developer.openstack.org/api-ref/shared-file-systems/?expanded=create-share-detail#create-share). The value of `NFS` will be always used.
@@ -102,12 +102,17 @@ metadata:
   annotations:
     "volume.beta.kubernetes.io/storage-class": "manilaNFSshare"
 spec:
+  accessModes:
+    - ReadWriteOnce
   resources:
     requests:
       storage: 2G
 ```
 Mandatory parameter(s):
 - `storage` and the requested storage size must be whole integer number in GBs.
+
+Ignored parameter(s):
+- `accessModes` are ignored. A PV created on a PVC demand will contain all access modes supported by the corresponding filesystem specified in the corresponding Storage Class (note: currently, only NFS is supported that's why all ReadWriteOnce, ReadOnlyMany and ReadWriteMany access modes are filled into the PV).
 
 [Create request](http://developer.openstack.org/api-ref/shared-file-systems/?expanded=create-share-detail#create-share) optional parameters that won't be supported in PVC:
 - `name`
