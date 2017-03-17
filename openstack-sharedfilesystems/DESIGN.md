@@ -23,7 +23,43 @@ This approach won't be implemented but might be considered as a future improveme
 The [`gophercloud` library](https://github.com/gophercloud/gophercloud) will be used for communication with Manila API.
 
 ### Authentication to Manila Service
-TBD
+`gophercloud`library reads values for authentication from environment variables. The below environment variable combinations were successfully used for authentication against Keystone version Newton `2:10.0.0-0ubuntu1`:
+
+```
+OS_USERNAME=demo
+OS_PASSWORD=openstack
+OS_AUTH_URL=http://localhost:35357/v3
+OS_DOMAIN_NAME=Default
+OS_TENANT_NAME=demo
+```
+
+```
+OS_USERID=7e22ce01934c47dcae0f90e96cdfcf03
+OS_PASSWORD=openstack
+OS_AUTH_URL=http://localhost:35357/v3
+OS_TENANT_ID=ecbc0da9369f41e3a8a17e49a425ff2d
+```
+
+```
+OS_USERNAME=demo
+OS_PASSWORD=openstack
+OS_AUTH_URL=http://localhost:35357/v3
+OS_DOMAIN_ID=default
+OS_TENANT_NAME=demo
+```
+
+```
+OS_USERNAME=demo
+OS_PASSWORD=openstack
+OS_AUTH_URL=http://localhost:35357/v3
+OS_DOMAIN_ID=default
+OS_TENANT_ID=ecbc0da9369f41e3a8a17e49a425ff2d
+```
+
+Note: [an issue](https://github.com/gophercloud/gophercloud/issues/297) is logged because the `OS_PROJECT_NAME` and `OS_PROJECT_ID` environment variables are not taken into account.
+
+#### Authentication Token Limited Validity
+Authentication token created during authentication and used in follow-up API calls has limited validity and may expire after 1 hour. That means that the provisioner should **stop** working after 1 hour. Currently, there is no solution to this potential problem.
 
 ### Share Creation and Deletion
 [`Create`, `Delete` and `Get` methods](https://github.com/gophercloud/gophercloud/blob/master/openstack/sharedfilesystems/v2/shares/requests.go) are already available and will be needed to create a new share or delete an existing share.
