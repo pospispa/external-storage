@@ -64,6 +64,8 @@ Authentication token created during authentication and used in follow-up API cal
 ### Share Creation and Deletion
 [`Create`, `Delete` and `Get` methods](https://github.com/gophercloud/gophercloud/blob/master/openstack/sharedfilesystems/v2/shares/requests.go) are already available and will be needed to create a new share or delete an existing share.
 
+Important: the deletion shall be implemented in such a way that even though the share still contains some data the share is deleted. This behaviour may depend on the used Manila back-end.
+
 ### Access Control
 Access control must be set to every newly created share, otherwise the share can't be mounted.
 There're issues logged for [Manila API](https://github.com/gophercloud/gophercloud/issues/114) and [Manila shares](https://github.com/gophercloud/gophercloud/issues/129), however, nothing is implemented for the access control feature and there are no pull-requests for it.
