@@ -19,7 +19,7 @@ func mockGetAllZones() (sets.String, error) {
 }
 
 func TestPrepareCreateRequest(t *testing.T) {
-	functionUnderTest := "prepareCreateRequestv2"
+	functionUnderTest := "PrepareCreateRequestv2"
 	zonesForSCMultiZoneTestCase := "nova1, nova2, nova3"
 	setOfZonesForSCMultiZoneTestCase, _ := zonesToSet(zonesForSCMultiZoneTestCase)
 	pvcNameForSCMultiZoneTestCase := "pvc"
@@ -160,7 +160,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 		} else {
 			succCase.volumeOptions.PVC.Spec.Resources.Requests[v1.ResourceStorage] = quantity
 		}
-		if request, err := prepareCreateRequest(succCase.volumeOptions, mockGetAllZones); err != nil {
+		if request, err := PrepareCreateRequest(succCase.volumeOptions, mockGetAllZones); err != nil {
 			t.Errorf("Test case %v: %v(%v) RETURNED (%v, %v), WANT (%v, %v)", i, functionUnderTest, succCase.volumeOptions, request, err, succCase.want, nil)
 		} else if !reflect.DeepEqual(request, succCase.want) {
 			t.Errorf("Test case %v: %v(%v) RETURNED (%v, %v), WANT (%v, %v)", i, functionUnderTest, succCase.volumeOptions, request, err, succCase.want, nil)
@@ -252,7 +252,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 		} else {
 			errCase.volumeOptions.PVC.Spec.Resources.Requests[v1.ResourceStorage] = quantity
 		}
-		if request, err := prepareCreateRequest(errCase.volumeOptions, mockGetAllZones); err == nil {
+		if request, err := PrepareCreateRequest(errCase.volumeOptions, mockGetAllZones); err == nil {
 			t.Errorf("%v(%v) RETURNED (%v, %v), WANT (%v, %v)", functionUnderTest, errCase.volumeOptions, request, err, "N/A", "an error")
 		}
 	}
@@ -285,7 +285,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 		},
 	}
 	for _, errCase := range errCasesStorageSizeNotConfigured {
-		if request, err := prepareCreateRequest(errCase, mockGetAllZones); err == nil {
+		if request, err := PrepareCreateRequest(errCase, mockGetAllZones); err == nil {
 			t.Errorf("%v(%v) RETURNED (%v, %v), WANT (%v, %v)", functionUnderTest, errCase, request, err, "N/A", "an error")
 		}
 	}
