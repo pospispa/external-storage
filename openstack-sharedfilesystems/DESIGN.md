@@ -71,7 +71,7 @@ Access control must be set to every newly created share, otherwise the share can
 There're issues logged for [Manila API](https://github.com/gophercloud/gophercloud/issues/114) and [Manila shares](https://github.com/gophercloud/gophercloud/issues/129), however, nothing is implemented for the access control feature and there are no pull-requests for it.
 
 Therefore, the below API calls have to be implemented:
-- [Share export locations](https://developer.openstack.org/api-ref/shared-file-systems/#share-export-locations-since-api-v2-9) and maybe alse [Share instance export locations](https://developer.openstack.org/api-ref/shared-file-systems/#share-instance-export-locations-since-api-v2-9).
+- [Share export locations](https://developer.openstack.org/api-ref/shared-file-systems/#share-export-locations-since-api-v2-9) and maybe also [Share instance export locations](https://developer.openstack.org/api-ref/shared-file-systems/#share-instance-export-locations-since-api-v2-9).
 - [Grant access](https://developer.openstack.org/api-ref/shared-file-systems/#grant-access) to a share.
 - [List access rules](https://developer.openstack.org/api-ref/shared-file-systems/#list-access-rules) may be needed.
 
