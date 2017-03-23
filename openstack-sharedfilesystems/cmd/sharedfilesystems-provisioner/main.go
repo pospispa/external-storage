@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
@@ -38,16 +39,6 @@ func main() {
 	authOpts, err := openstack.AuthOptionsFromEnv()
 	if err != nil {
 		fmt.Printf("AuthOptionsFromEnv failed: (%v)", err)
-		return
-	}
-	provider, err := openstack.AuthenticatedClient(authOpts)
-	if err != nil {
-		fmt.Printf("AuthenticatedClient failed: (%v)", err)
-		return
-	}
-	client, err := openstack.NewSharedFileSystemV2(provider, gophercloud.EndpointOpts{Region: "RegionOne"})
-	if err != nil {
-		fmt.Printf("NewSharedFileSystemV2 failed: (%v)", err)
 		return
 	}
 
@@ -75,10 +66,37 @@ func main() {
 	if createReq, err := sharedfilesystems.PrepareCreateRequest(pvc, devMockGetAllZones); err != nil {
 		fmt.Printf("Failed to create Create Request: %v", err)
 	} else {
-		if createReqResponse, err := shares.Create(client, createReq).Extract(); err != nil {
-			fmt.Printf("Response to create request says failed: %v", err)
-		} else {
-			fmt.Printf("Response: (%v)", createReqResponse)
+		for i := 0; i < 9; i++ {
+			fmt.Printf("====================================================================================================================")
+			fmt.Println()
+			provider, err := openstack.AuthenticatedClient(authOpts)
+			if err != nil {
+				fmt.Printf("AuthenticatedClient failed: (%v)", err)
+				return
+			}
+			client, err := openstack.NewSharedFileSystemV2(provider, gophercloud.EndpointOpts{Region: "RegionOne"})
+			if err != nil {
+				fmt.Printf("NewSharedFileSystemV2 failed: (%v)", err)
+				fmt.Println()
+				return
+			}
+			fmt.Printf("Provider alias high-level client: (%v)", provider)
+			fmt.Println()
+			fmt.Printf("Client alias low-level client: (%v)", client)
+			fmt.Println()
+			if createReqResponse, err := shares.Create(client, createReq).Extract(); err != nil {
+				fmt.Printf("Response to create request says failed: %v", err)
+				fmt.Println()
+				break
+			} else {
+				fmt.Printf("Response: (%v)", createReqResponse)
+				fmt.Println()
+			}
+			fmt.Printf("Current time: (%v)", time.Now())
+			fmt.Println()
+			second := 1000 * time.Millisecond
+			minute := 60 * second
+			time.Sleep(10 * minute)
 		}
 	}
 }
