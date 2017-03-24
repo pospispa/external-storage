@@ -26,6 +26,7 @@ import (
 	sharedfilesystems "github.com/kubernetes-incubator/external-storage/openstack-sharedfilesystems/pkg"
 	"k8s.io/client-go/pkg/api/resource"
 	"k8s.io/client-go/pkg/api/v1"
+	"k8s.io/client-go/pkg/types"
 	"k8s.io/kubernetes/pkg/util/sets"
 )
 
@@ -55,7 +56,10 @@ func main() {
 		PersistentVolumeReclaimPolicy: "Delete",
 		PVName: "pv",
 		PVC: &v1.PersistentVolumeClaim{
-			ObjectMeta: v1.ObjectMeta{Name: "pvc", Namespace: "foo"},
+			ObjectMeta: v1.ObjectMeta{
+				Name:      "pvc",
+				Namespace: "foo",
+				UID:       types.UID("unique-uid")},
 			Spec: v1.PersistentVolumeClaimSpec{
 				Resources: v1.ResourceRequirements{
 					Requests: v1.ResourceList{
@@ -75,10 +79,14 @@ func main() {
 	if createReq, err := sharedfilesystems.PrepareCreateRequest(pvc, devMockGetAllZones); err != nil {
 		fmt.Printf("Failed to create Create Request: %v", err)
 	} else {
+		fmt.Printf("Request: %v", createReq)
+		fmt.Println("")
 		if createReqResponse, err := shares.Create(client, createReq).Extract(); err != nil {
 			fmt.Printf("Response to create request says failed: %v", err)
+			fmt.Println("")
 		} else {
 			fmt.Printf("Response: (%v)", createReqResponse)
+			fmt.Println("")
 		}
 	}
 }
