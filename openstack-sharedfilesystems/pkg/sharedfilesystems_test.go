@@ -21,7 +21,12 @@ func mockGetAllZones() (sets.String, error) {
 
 func TestPrepareCreateRequest(t *testing.T) {
 	functionUnderTest := "PrepareCreateRequestv2"
+
 	fakeUID := types.UID("unique-uid")
+	fakeShareName := "pvc-" + string(fakeUID)
+	fakePVCName := "pvc"
+	fakeNamespace := "foo"
+
 	zonesForSCMultiZoneTestCase := "nova1, nova2, nova3"
 	setOfZonesForSCMultiZoneTestCase, _ := zonesToSet(zonesForSCMultiZoneTestCase)
 	pvcNameForSCMultiZoneTestCase := "pvc"
@@ -43,7 +48,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 				PVC: &v1.PersistentVolumeClaim{
 					ObjectMeta: v1.ObjectMeta{
 						Name:      pvcNameForSCNoZonesSpecifiedTestCase,
-						Namespace: "foo",
+						Namespace: fakeNamespace,
 						UID:       fakeUID},
 					Spec: v1.PersistentVolumeClaimSpec{
 						Resources: v1.ResourceRequirements{
@@ -58,7 +63,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 			storageSize: "2G",
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
-				Name:             string(fakeUID),
+				Name:             fakeShareName,
 				AvailabilityZone: expectedResultForSCNoZonesSpecifiedTestCase,
 				Size:             2,
 			},
@@ -69,8 +74,8 @@ func TestPrepareCreateRequest(t *testing.T) {
 				PVName: "pv",
 				PVC: &v1.PersistentVolumeClaim{
 					ObjectMeta: v1.ObjectMeta{
-						Name:      "pvc",
-						Namespace: "foo",
+						Name:      fakePVCName,
+						Namespace: fakeNamespace,
 						UID:       fakeUID},
 					Spec: v1.PersistentVolumeClaimSpec{
 						Resources: v1.ResourceRequirements{
@@ -85,7 +90,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 			storageSize: "2G",
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
-				Name:             string(fakeUID),
+				Name:             fakeShareName,
 				AvailabilityZone: "nova",
 				Size:             2,
 			},
@@ -96,8 +101,8 @@ func TestPrepareCreateRequest(t *testing.T) {
 				PVName: "pv",
 				PVC: &v1.PersistentVolumeClaim{
 					ObjectMeta: v1.ObjectMeta{
-						Name:      "pvc",
-						Namespace: "foo",
+						Name:      fakePVCName,
+						Namespace: fakeNamespace,
 						UID:       fakeUID},
 					Spec: v1.PersistentVolumeClaimSpec{
 						Resources: v1.ResourceRequirements{
@@ -112,7 +117,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 			storageSize: "2G",
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
-				Name:             string(fakeUID),
+				Name:             fakeShareName,
 				AvailabilityZone: "nova",
 				Size:             2,
 			},
@@ -125,7 +130,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 				PVC: &v1.PersistentVolumeClaim{
 					ObjectMeta: v1.ObjectMeta{
 						Name:      pvcNameForSCMultiZoneTestCase,
-						Namespace: "foo",
+						Namespace: fakeNamespace,
 						UID:       fakeUID},
 					Spec: v1.PersistentVolumeClaimSpec{
 						Resources: v1.ResourceRequirements{
@@ -140,7 +145,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 			storageSize: "2G",
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
-				Name:             string(fakeUID),
+				Name:             fakeShareName,
 				AvailabilityZone: expectedResultForSCMultiZoneTestCase,
 				Size:             2,
 			},
@@ -152,8 +157,8 @@ func TestPrepareCreateRequest(t *testing.T) {
 				PVName: "pv",
 				PVC: &v1.PersistentVolumeClaim{
 					ObjectMeta: v1.ObjectMeta{
-						Name:      "pvc",
-						Namespace: "foo",
+						Name:      fakePVCName,
+						Namespace: fakeNamespace,
 						UID:       fakeUID},
 					Spec: v1.PersistentVolumeClaimSpec{
 						AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadOnlyMany},
@@ -169,7 +174,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 			storageSize: "2G",
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
-				Name:             string(fakeUID),
+				Name:             fakeShareName,
 				AvailabilityZone: "nova",
 				Size:             2,
 			},
