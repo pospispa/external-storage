@@ -69,6 +69,7 @@ func PrepareCreateRequest(options controller.VolumeOptions, getAllZones func() (
 	}
 
 	// optional parameters
+	request.Name = string(options.PVC.UID)
 	isZonesParam := false
 	for index, value := range options.Parameters {
 		switch strings.ToLower(index) {

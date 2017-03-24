@@ -6,6 +6,7 @@ import (
 
 	"k8s.io/client-go/pkg/api/resource"
 	"k8s.io/client-go/pkg/api/v1"
+	"k8s.io/client-go/pkg/types"
 	"k8s.io/kubernetes/pkg/util/sets"
 	"k8s.io/kubernetes/pkg/volume"
 
@@ -20,6 +21,7 @@ func mockGetAllZones() (sets.String, error) {
 
 func TestPrepareCreateRequest(t *testing.T) {
 	functionUnderTest := "PrepareCreateRequestv2"
+	fakeUID := types.UID("unique-uid")
 	zonesForSCMultiZoneTestCase := "nova1, nova2, nova3"
 	setOfZonesForSCMultiZoneTestCase, _ := zonesToSet(zonesForSCMultiZoneTestCase)
 	pvcNameForSCMultiZoneTestCase := "pvc"
@@ -39,7 +41,10 @@ func TestPrepareCreateRequest(t *testing.T) {
 				PersistentVolumeReclaimPolicy: "Delete",
 				PVName: "pv",
 				PVC: &v1.PersistentVolumeClaim{
-					ObjectMeta: v1.ObjectMeta{Name: pvcNameForSCNoZonesSpecifiedTestCase, Namespace: "foo"},
+					ObjectMeta: v1.ObjectMeta{
+						Name:      pvcNameForSCNoZonesSpecifiedTestCase,
+						Namespace: "foo",
+						UID:       fakeUID},
 					Spec: v1.PersistentVolumeClaimSpec{
 						Resources: v1.ResourceRequirements{
 							Requests: v1.ResourceList{
@@ -53,6 +58,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 			storageSize: "2G",
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
+				Name:             string(fakeUID),
 				AvailabilityZone: expectedResultForSCNoZonesSpecifiedTestCase,
 				Size:             2,
 			},
@@ -62,7 +68,10 @@ func TestPrepareCreateRequest(t *testing.T) {
 				PersistentVolumeReclaimPolicy: "Delete",
 				PVName: "pv",
 				PVC: &v1.PersistentVolumeClaim{
-					ObjectMeta: v1.ObjectMeta{Name: "pvc", Namespace: "foo"},
+					ObjectMeta: v1.ObjectMeta{
+						Name:      "pvc",
+						Namespace: "foo",
+						UID:       fakeUID},
 					Spec: v1.PersistentVolumeClaimSpec{
 						Resources: v1.ResourceRequirements{
 							Requests: v1.ResourceList{
@@ -76,6 +85,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 			storageSize: "2G",
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
+				Name:             string(fakeUID),
 				AvailabilityZone: "nova",
 				Size:             2,
 			},
@@ -85,7 +95,10 @@ func TestPrepareCreateRequest(t *testing.T) {
 				PersistentVolumeReclaimPolicy: "Delete",
 				PVName: "pv",
 				PVC: &v1.PersistentVolumeClaim{
-					ObjectMeta: v1.ObjectMeta{Name: "pvc", Namespace: "foo"},
+					ObjectMeta: v1.ObjectMeta{
+						Name:      "pvc",
+						Namespace: "foo",
+						UID:       fakeUID},
 					Spec: v1.PersistentVolumeClaimSpec{
 						Resources: v1.ResourceRequirements{
 							Requests: v1.ResourceList{
@@ -99,6 +112,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 			storageSize: "2G",
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
+				Name:             string(fakeUID),
 				AvailabilityZone: "nova",
 				Size:             2,
 			},
@@ -109,7 +123,10 @@ func TestPrepareCreateRequest(t *testing.T) {
 				PersistentVolumeReclaimPolicy: "Delete",
 				PVName: "pv",
 				PVC: &v1.PersistentVolumeClaim{
-					ObjectMeta: v1.ObjectMeta{Name: pvcNameForSCMultiZoneTestCase, Namespace: "foo"},
+					ObjectMeta: v1.ObjectMeta{
+						Name:      pvcNameForSCMultiZoneTestCase,
+						Namespace: "foo",
+						UID:       fakeUID},
 					Spec: v1.PersistentVolumeClaimSpec{
 						Resources: v1.ResourceRequirements{
 							Requests: v1.ResourceList{
@@ -123,6 +140,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 			storageSize: "2G",
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
+				Name:             string(fakeUID),
 				AvailabilityZone: expectedResultForSCMultiZoneTestCase,
 				Size:             2,
 			},
@@ -133,7 +151,10 @@ func TestPrepareCreateRequest(t *testing.T) {
 				PersistentVolumeReclaimPolicy: "Delete",
 				PVName: "pv",
 				PVC: &v1.PersistentVolumeClaim{
-					ObjectMeta: v1.ObjectMeta{Name: "pvc", Namespace: "foo"},
+					ObjectMeta: v1.ObjectMeta{
+						Name:      "pvc",
+						Namespace: "foo",
+						UID:       fakeUID},
 					Spec: v1.PersistentVolumeClaimSpec{
 						AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadOnlyMany},
 						Resources: v1.ResourceRequirements{
@@ -148,6 +169,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 			storageSize: "2G",
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
+				Name:             string(fakeUID),
 				AvailabilityZone: "nova",
 				Size:             2,
 			},
