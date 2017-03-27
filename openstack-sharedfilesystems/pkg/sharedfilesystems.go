@@ -70,6 +70,11 @@ func PrepareCreateRequest(options controller.VolumeOptions, getAllZones func() (
 
 	// optional parameters
 	request.Name = "pvc-" + string(options.PVC.UID)
+	tags := make(map[string]string)
+	tags[CloudVolumeCreatedForClaimNamespaceTag] = options.PVC.Namespace
+	tags[CloudVolumeCreatedForClaimNameTag] = options.PVC.Name
+	tags[CloudVolumeCreatedForVolumeNameTag] = request.Name
+	request.Metadata = tags
 	isZonesParam := false
 	for index, value := range options.Parameters {
 		switch strings.ToLower(index) {

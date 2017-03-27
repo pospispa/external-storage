@@ -7,7 +7,19 @@ import (
 	"k8s.io/kubernetes/pkg/util/sets"
 )
 
-// TO BE DELETED after the below function(s) are merged into k8s
+// TO BE DELETED after the below code is merged into K8s
+
+// CloudVolumeCreatedForClaimNamespaceTag is a name of a tag attached to a real volume in cloud (e.g. AWS EBS or GCE PD)
+// with namespace of a persistent volume claim used to create this volume.
+const CloudVolumeCreatedForClaimNamespaceTag = "kubernetes.io/created-for/pvc/namespace"
+
+// CloudVolumeCreatedForClaimNameTag is a name of a tag attached to a real volume in cloud (e.g. AWS EBS or GCE PD)
+// with name of a persistent volume claim used to create this volume.
+const CloudVolumeCreatedForClaimNameTag = "kubernetes.io/created-for/pvc/name"
+
+// CloudVolumeCreatedForVolumeNameTag is a name of a tag attached to a real volume in cloud (e.g. AWS EBS or GCE PD)
+// with name of appropriate Kubernetes persistent volume .
+const CloudVolumeCreatedForVolumeNameTag = "kubernetes.io/created-for/pv/name"
 
 // zonesToSet converts a string containing a comma separated list of zones to set
 func zonesToSet(zonesString string) (sets.String, error) {

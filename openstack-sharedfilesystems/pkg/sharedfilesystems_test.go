@@ -187,6 +187,11 @@ func TestPrepareCreateRequest(t *testing.T) {
 		} else {
 			succCase.volumeOptions.PVC.Spec.Resources.Requests[v1.ResourceStorage] = quantity
 		}
+		tags := make(map[string]string)
+		tags[CloudVolumeCreatedForClaimNamespaceTag] = fakeNamespace
+		tags[CloudVolumeCreatedForClaimNameTag] = succCase.volumeOptions.PVC.Name
+		tags[CloudVolumeCreatedForVolumeNameTag] = succCase.want.Name
+		succCase.want.Metadata = tags
 		if request, err := PrepareCreateRequest(succCase.volumeOptions, mockGetAllZones); err != nil {
 			t.Errorf("Test case %v: %v(%v) RETURNED (%v, %v), WANT (%v, %v)", i, functionUnderTest, succCase.volumeOptions, request, err, succCase.want, nil)
 		} else if !reflect.DeepEqual(request, succCase.want) {
