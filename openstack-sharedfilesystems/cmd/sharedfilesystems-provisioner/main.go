@@ -90,6 +90,7 @@ func main() {
 	} else {
 		pvc.PVC.Spec.Resources.Requests[v1.ResourceStorage] = quantity
 	}
+	var shareID string
 	if createReq, err := sharedfilesystems.PrepareCreateRequest(pvc, devMockGetAllZones); err != nil {
 		fmt.Printf("Failed to create Create Request: (%v)", err)
 	} else {
@@ -102,6 +103,16 @@ func main() {
 		} else {
 			fmt.Printf("Create response: (%v)", createReqResponse)
 			fmt.Println("")
+			shareID = createReqResponse.ID
 		}
+	}
+	fmt.Println("")
+	if err = sharedfilesystems.WaitTillAvailable(client, shareID); err != nil {
+		fmt.Printf("Response to WaitTillAvailable says failed: (%v)", err)
+		fmt.Println("")
+		return
+	} else {
+		fmt.Printf("WaitTillAvailable returned no error")
+		fmt.Println("")
 	}
 }
