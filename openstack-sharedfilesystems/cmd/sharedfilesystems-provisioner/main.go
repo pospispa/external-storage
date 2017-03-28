@@ -76,17 +76,30 @@ func main() {
 	} else {
 		pvc.PVC.Spec.Resources.Requests[v1.ResourceStorage] = quantity
 	}
+	var shareID string
 	if createReq, err := sharedfilesystems.PrepareCreateRequest(pvc, devMockGetAllZones); err != nil {
-		fmt.Printf("Failed to create Create Request: %v", err)
+		fmt.Printf("Failed to create Create Request: (%v)", err)
 	} else {
 		fmt.Printf("Request: %v", createReq)
 		fmt.Println("")
 		if createReqResponse, err := shares.Create(client, createReq).Extract(); err != nil {
-			fmt.Printf("Response to create request says failed: %v", err)
+			fmt.Printf("Response to create request says failed: (%v)", err)
 			fmt.Println("")
+			return
 		} else {
-			fmt.Printf("Response: (%v)", createReqResponse)
+			fmt.Printf("Create response: (%v)", createReqResponse)
 			fmt.Println("")
+			shareID = createReqResponse.ID
 		}
+	}
+	fmt.Println("")
+	var getReqResponse *shares.Share
+	if getReqResponse, err = sharedfilesystems.WaitTillAvailable(client, shareID); err != nil {
+		fmt.Printf("Response to WaitTillAvailable says failed: (%v)", err)
+		fmt.Println("")
+		return
+	} else {
+		fmt.Printf("WaitTillAvailable response: (%v)", getReqResponse)
+		fmt.Println("")
 	}
 }

@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/shares"
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
 	"k8s.io/client-go/pkg/api/resource"
@@ -57,6 +59,9 @@ func getPVCStorageSize(pvc *v1.PersistentVolumeClaim) (int, error) {
 	}
 }
 
+// PrepareCreateRequest return:
+// - success: ready to send shared filesystem create request data structure constructed from Persistent Volume Claim and corresponding Storage Class
+// - failure: an error
 func PrepareCreateRequest(options controller.VolumeOptions, getAllZones func() (sets.String, error)) (shares.CreateOpts, error) {
 	var request shares.CreateOpts
 	// Currently only the NFS shares are supported, that's why the NFS is hardcoded.
@@ -97,4 +102,29 @@ func PrepareCreateRequest(options controller.VolumeOptions, getAllZones func() (
 		}
 	}
 	return request, nil
+}
+
+// WaitTillAvailable keeps querying Manila API for a share status until it is available. The waiting can:
+// - succeed: in this case the Get response is returned.
+// - timeout: error is returned.
+// - another error occurs: error is returned.
+func WaitTillAvailable(client *gophercloud.ServiceClient, shareID string) (*shares.Share, error) {
+	desiredState := "available"
+	var timeoutInSec, firstWaitInSec, waitMultiplier, currentWaitInSec time.Duration
+	timeoutInSec = 120 * 1000 * time.Millisecond
+	firstWaitInSec = 1 * 1000 * time.Millisecond
+	waitMultiplier = 2
+	currentWaitInSec = firstWaitInSec
+	for currentWaitInSec <= timeoutInSec {
+		time.Sleep(currentWaitInSec)
+		if getReqResponse, err := shares.Get(client, shareID).Extract(); err != nil {
+			return nil, err
+		} else {
+			if getReqResponse.Status == desiredState {
+				return getReqResponse, nil
+			}
+		}
+		currentWaitInSec *= waitMultiplier
+	}
+	return nil, fmt.Errorf("timeouted waiting for the provisioned share (id: %q) to become available.", shareID)
 }
