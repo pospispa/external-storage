@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/shares"
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
 	"k8s.io/api/core/v1"
@@ -68,6 +69,9 @@ func getPVCStorageSize(pvc *v1.PersistentVolumeClaim) (int, error) {
 	return i, nil
 }
 
+// PrepareCreateRequest return:
+// - success: ready to send shared filesystem create request data structure constructed from Persistent Volume Claim and corresponding Storage Class
+// - failure: an error
 func PrepareCreateRequest(options controller.VolumeOptions, getAllZones func() (sets.String, error)) (shares.CreateOpts, error) {
 	var request shares.CreateOpts
 	var storageSize int
@@ -112,4 +116,24 @@ func PrepareCreateRequest(options controller.VolumeOptions, getAllZones func() (
 		request.AvailabilityZone = volume.ChooseZoneForVolume(allAvailableZones, options.PVC.Name)
 	}
 	return request, nil
+}
+
+// WaitTillAvailable keeps querying Manila API for a share status until it is available. The waiting can:
+// - succeed: in this case the is/becomes available
+// - timeout: error is returned.
+// - another error occurs: error is returned.
+func WaitTillAvailable(client *gophercloud.ServiceClient, shareID string) error {
+	desiredStatus := "available"
+	timeout := 120 /* secs */
+	return gophercloud.WaitFor(timeout, func() (bool, error) {
+		current, err := shares.Get(client, shareID).Extract()
+		if err != nil {
+			return false, err
+		}
+
+		if current.Status == desiredStatus {
+			return true, nil
+		}
+		return false, nil
+	})
 }
