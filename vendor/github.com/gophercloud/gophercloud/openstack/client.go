@@ -8,12 +8,19 @@ import (
 	"github.com/gophercloud/gophercloud"
 	tokens2 "github.com/gophercloud/gophercloud/openstack/identity/v2/tokens"
 	tokens3 "github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
+	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/shares"
 	"github.com/gophercloud/gophercloud/openstack/utils"
 )
 
 const (
 	v20 = "v2.0"
 	v30 = "v3.0"
+)
+
+const (
+	statusCurrent    = "CURRENT"
+	statusSupported  = "SUPPORTED"
+	statusDeprecated = "DEPRECATED"
 )
 
 // NewClient prepares an unauthenticated ProviderClient instance.
@@ -276,7 +283,17 @@ func NewSharedFileSystemV2(client *gophercloud.ProviderClient, eo gophercloud.En
 	if err != nil {
 		return nil, err
 	}
-	return &gophercloud.ServiceClient{ProviderClient: client, Endpoint: url}, nil
+	serviceClient := &gophercloud.ServiceClient{ProviderClient: client, Endpoint: url}
+	respMicroversions := shares.GetMicroversion(serviceClient)
+	// failed to get a Microversion so keep ServiceClient.Microversion empty
+	if extractedMicroversionsReqResp, err := respMicroversions.ExtractMicroversion(); err == nil {
+		for _, extractedMicroversion := range *extractedMicroversionsReqResp {
+			if extractedMicroversion.Status == statusCurrent && len(extractedMicroversion.Version) > 0 {
+				serviceClient.Microversion = extractedMicroversion.Version
+			}
+		}
+	}
+	return serviceClient, nil
 }
 
 // NewCDNV1 creates a ServiceClient that may be used to access the OpenStack v1
