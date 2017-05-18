@@ -39,18 +39,25 @@ func main() {
 	authOpts, err := openstack.AuthOptionsFromEnv()
 	if err != nil {
 		fmt.Printf("AuthOptionsFromEnv failed: (%v)", err)
+		fmt.Println("")
 		return
 	}
 	provider, err := openstack.AuthenticatedClient(authOpts)
 	if err != nil {
 		fmt.Printf("AuthenticatedClient failed: (%v)", err)
+		fmt.Println("")
 		return
 	}
 	client, err := openstack.NewSharedFileSystemV2(provider, gophercloud.EndpointOpts{Region: "RegionOne"})
 	if err != nil {
 		fmt.Printf("NewSharedFileSystemV2 failed: (%v)", err)
+		fmt.Println("")
 		return
 	}
+	fmt.Printf("Provider client: (%v)", provider)
+	fmt.Println("")
+	fmt.Printf("Client: (%v)", client)
+	fmt.Println("")
 
 	pvc := controller.VolumeOptions{
 		PersistentVolumeReclaimPolicy: "Delete",
@@ -90,6 +97,7 @@ func main() {
 			fmt.Printf("Create response: (%v)", createReqResponse)
 			fmt.Println("")
 			shareID = createReqResponse.ID
+			//tenantID = createReqResponse.ProjectID
 		}
 	}
 	fmt.Println("")
@@ -100,6 +108,27 @@ func main() {
 		return
 	} else {
 		fmt.Printf("WaitTillAvailable response: (%v)", getReqResponse)
+		fmt.Println("")
+	}
+
+	//fmt.Println("")
+	//fmt.Printf("Sleep")
+	//fmt.Println("")
+	//time.Sleep(90000 * time.Millisecond)
+
+	var grantAccessReq shares.GrantAccessOpts
+	//grantAccessReq.ShareID = shareID
+	grantAccessReq.AccessType = "ip"
+	grantAccessReq.AccessTo = "0.0.0.0/0"
+	grantAccessReq.AccessLevel = "rw"
+	// var tenantID string
+	//grantAccessReq.TenantID = tenantID
+	if grantAccessReqResponse, err := shares.GrantAccess(client, grantAccessReq, shareID).ExtractGrantAccess(); err != nil {
+		fmt.Printf("Response to grant access request says failed: (%v)", err)
+		fmt.Println("")
+		return
+	} else {
+		fmt.Printf("Grant Access response: (%v)", grantAccessReqResponse)
 		fmt.Println("")
 	}
 }
