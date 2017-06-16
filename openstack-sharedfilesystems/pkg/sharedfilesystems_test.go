@@ -394,3 +394,193 @@ func TestPrepareCreateRequest(t *testing.T) {
 		}
 	}
 }
+
+const (
+	validPath              = "ip://directory"
+	preferredPath          = "ip://preferred/directory"
+	emptyPath              = ""
+	spacesOnlyPath         = "  	  "
+	shareExportLocationID1 = "123456-1"
+	shareExportLocationID2 = "1234567-1"
+	shareExportLocationID3 = "1234567-2"
+	shareExportLocationID4 = "7654321-1"
+	shareID1               = "123456"
+	shareID2               = "1234567"
+)
+
+func TestChooseExportLocationSuccess(t *testing.T) {
+	tests := []struct {
+		testCaseName string
+		locs         []shares.ExportLocation
+		want         shares.ExportLocation
+	}{
+		{
+			testCaseName: "Match first item:",
+			locs: []shares.ExportLocation{
+				{
+					Path:            validPath,
+					ShareInstanceID: shareID1,
+					IsAdminOnly:     false,
+					ID:              shareExportLocationID1,
+					Preferred:       false,
+				},
+			},
+			want: shares.ExportLocation{
+				Path:            validPath,
+				ShareInstanceID: shareID1,
+				IsAdminOnly:     false,
+				ID:              shareExportLocationID1,
+				Preferred:       false,
+			},
+		},
+		{
+			testCaseName: "Match preferred location:",
+			locs: []shares.ExportLocation{
+				{
+					Path:            validPath,
+					ShareInstanceID: shareID2,
+					IsAdminOnly:     false,
+					ID:              shareExportLocationID2,
+					Preferred:       false,
+				},
+				{
+					Path:            preferredPath,
+					ShareInstanceID: shareID2,
+					IsAdminOnly:     false,
+					ID:              shareExportLocationID3,
+					Preferred:       true,
+				},
+			},
+			want: shares.ExportLocation{
+				Path:            preferredPath,
+				ShareInstanceID: shareID2,
+				IsAdminOnly:     false,
+				ID:              shareExportLocationID3,
+				Preferred:       true,
+			},
+		},
+		{
+			testCaseName: "Match first not-preferred location that matches shareID:",
+			locs: []shares.ExportLocation{
+				{
+					Path:            validPath,
+					ShareInstanceID: shareID2,
+					IsAdminOnly:     false,
+					ID:              shareExportLocationID2,
+					Preferred:       false,
+				},
+				{
+					Path:            preferredPath,
+					ShareInstanceID: shareID2,
+					IsAdminOnly:     false,
+					ID:              shareExportLocationID3,
+					Preferred:       false,
+				},
+			},
+			want: shares.ExportLocation{
+				Path:            validPath,
+				ShareInstanceID: shareID2,
+				IsAdminOnly:     false,
+				ID:              shareExportLocationID2,
+				Preferred:       false,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		if got, err := ChooseExportLocation(tt.locs); err != nil {
+			t.Errorf("%q ChooseExportLocation(%v) = (%v, %q) want (%v, nil)", tt.testCaseName, tt.locs, got, err.Error(), tt.want)
+		} else if !reflect.DeepEqual(tt.want, got) {
+			t.Errorf("%q ChooseExportLocation(%v) = (%v, nil) want (%v, nil)", tt.testCaseName, tt.locs, got, tt.want)
+		}
+	}
+}
+
+func TestChooseExportLocationNotFound(t *testing.T) {
+	tests := []struct {
+		testCaseName string
+		locs         []shares.ExportLocation
+	}{
+		{
+			testCaseName: "Empty slice:",
+			locs:         []shares.ExportLocation{},
+		},
+		{
+			testCaseName: "Locations for admins only:",
+			locs: []shares.ExportLocation{
+				{
+					Path:            validPath,
+					ShareInstanceID: shareID1,
+					IsAdminOnly:     true,
+					ID:              shareExportLocationID1,
+					Preferred:       false,
+				},
+			},
+		},
+		{
+			testCaseName: "Preferred locations for admins only:",
+			locs: []shares.ExportLocation{
+				{
+					Path:            validPath,
+					ShareInstanceID: shareID1,
+					IsAdminOnly:     true,
+					ID:              shareExportLocationID1,
+					Preferred:       true,
+				},
+			},
+		},
+		{
+			testCaseName: "Empty path:",
+			locs: []shares.ExportLocation{
+				{
+					Path:            emptyPath,
+					ShareInstanceID: shareID1,
+					IsAdminOnly:     false,
+					ID:              shareExportLocationID1,
+					Preferred:       false,
+				},
+			},
+		},
+		{
+			testCaseName: "Empty path in preferred location:",
+			locs: []shares.ExportLocation{
+				{
+					Path:            emptyPath,
+					ShareInstanceID: shareID1,
+					IsAdminOnly:     false,
+					ID:              shareExportLocationID1,
+					Preferred:       true,
+				},
+			},
+		},
+		{
+			testCaseName: "Path containing spaces only:",
+			locs: []shares.ExportLocation{
+				{
+					Path:            spacesOnlyPath,
+					ShareInstanceID: shareID1,
+					IsAdminOnly:     false,
+					ID:              shareExportLocationID1,
+					Preferred:       false,
+				},
+			},
+		},
+		{
+			testCaseName: "Preferred path containing spaces only:",
+			locs: []shares.ExportLocation{
+				{
+					Path:            spacesOnlyPath,
+					ShareInstanceID: shareID1,
+					IsAdminOnly:     false,
+					ID:              shareExportLocationID1,
+					Preferred:       true,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		if got, err := ChooseExportLocation(tt.locs); err == nil {
+			t.Errorf("%q ChooseExportLocation(%v) = (%v, nil) want (\"N/A\", \"an error\")", tt.testCaseName, tt.locs, got)
+		}
+	}
+}
