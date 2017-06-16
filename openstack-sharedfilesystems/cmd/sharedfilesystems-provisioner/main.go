@@ -82,7 +82,10 @@ func main() {
 				},
 			},
 		},
+		// Manila on notebook
 		Parameters: map[string]string{sharedfilesystems.ZonesSCParamName: "nova"},
+		// Roger's OpenStack
+		// Parameters: map[string]string{sharedfilesystems.ZonesSCParamName: "nova", TypeSCParamName: "default"},
 	}
 	storageSize := "2G"
 	if quantity, err := resource.ParseQuantity(storageSize); err != nil {
