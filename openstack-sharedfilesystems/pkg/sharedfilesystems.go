@@ -65,7 +65,12 @@ func getPVCStorageSize(pvc *v1.PersistentVolumeClaim) (int, error) {
 func PrepareCreateRequest(options controller.VolumeOptions, getAllZones func() (sets.String, error)) (shares.CreateOpts, error) {
 	var request shares.CreateOpts
 	// Currently only the NFS shares are supported, that's why the NFS is hardcoded.
+	// Manila on notebook
 	request.ShareProto = ProtocolNFS
+	// Roger's OpenStack
+	//request.ShareProto = "CEPHFS"
+	//request.ShareType = "default"
+
 	// mandatory parameters
 	if storageSize, err := getPVCStorageSize(options.PVC); err != nil {
 		return request, err
