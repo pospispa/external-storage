@@ -133,3 +133,33 @@ func WaitTillAvailable(client *gophercloud.ServiceClient, shareID string) (*shar
 	}
 	return nil, fmt.Errorf("timeouted waiting for the provisioned share (id: %q) to become available.", shareID)
 }
+
+// ChooseExportLocation chooses one ExportLocation according to the below rules:
+// 1. Path is not empty, i.e. is not an empty string or does not contain spaces and tabs only
+// 2. IsAdminOnly == false
+// 3. Preferred == true are preferred over Preferred == false
+// 4. Locations with lower slice index are preferred over locations with higher slice index
+// In case no location complies with the above rules an error is returned.
+func ChooseExportLocation(locs []shares.ExportLocation) (shares.ExportLocation, error) {
+	if len(locs) == 0 {
+		return shares.ExportLocation{}, fmt.Errorf("Error: received an empty list of export locations")
+	}
+	foundMatchingNotPreferred := false
+	var matchingNotPreferred shares.ExportLocation
+	for _, loc := range locs {
+		if loc.IsAdminOnly || strings.TrimSpace(loc.Path) == "" {
+			continue
+		}
+		if loc.Preferred {
+			return loc, nil
+		}
+		if !foundMatchingNotPreferred {
+			matchingNotPreferred = loc
+			foundMatchingNotPreferred = true
+		}
+	}
+	if foundMatchingNotPreferred {
+		return matchingNotPreferred, nil
+	}
+	return shares.ExportLocation{}, fmt.Errorf("Error: not found any non-AdminOnly export location")
+}
