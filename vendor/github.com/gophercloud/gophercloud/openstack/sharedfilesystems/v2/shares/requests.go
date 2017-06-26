@@ -1,6 +1,18 @@
 package shares
 
-import "github.com/gophercloud/gophercloud"
+import (
+	"fmt"
+
+	"github.com/gophercloud/gophercloud"
+	microver "github.com/pospispa/openstackmicroversions"
+)
+
+const (
+	grantAccessAPIRequestName            = "Grant Access"
+	grantAccessMinAPIMicroversion        = "2.7"
+	getExportLocationsAPIRequestName     = "Export Locations"
+	getExportLocationsMinAPIMicroversion = "2.14"
+)
 
 // CreateOptsBuilder allows extensions to add additional parameters to the
 // Create request.
@@ -115,15 +127,65 @@ func (opts GrantAccessOpts) ToGrantAccessMap() (map[string]interface{}, error) {
 // GrantAccess will grant access to a Share based on the values in GrantAccessOpts. To extract
 // the GrantAccess object from the response, call the Extract method on the GrantAccessResult.
 func GrantAccess(client *gophercloud.ServiceClient, opts GrantAccessOptsBuilder, id string) (r GrantAccessResult) {
-	// TODO: Microversion >= "2.7"
+	if client.Microversion == nil {
+		err := gophercloud.ErrNoMicroversion{}
+		err.ServiceName = string(client.Type)
+		err.APIRequestName = grantAccessAPIRequestName
+		r.Err = err
+		return
+	}
+	minMicroversion, e := microver.New(grantAccessMinAPIMicroversion)
+	if e != nil {
+		err := gophercloud.BaseError{}
+		err.Info = fmt.Sprintf("Internal error: the %s API request for the %s service: %s", grantAccessAPIRequestName, string(client.Type), e.Error())
+		r.Err = err
+		return
+	}
+	if client.Microversion.LessThan(minMicroversion) {
+		err := gophercloud.ErrLowMicroversion{}
+		err.ServiceName = string(client.Type)
+		err.APIRequestName = grantAccessAPIRequestName
+		err.MinAPIMicroversion = grantAccessMinAPIMicroversion
+		err.CurrentAPIMicroversion = client.Microversion.String()
+		r.Err = err
+		return
+	}
 	b, err := opts.ToGrantAccessMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
 	_, r.Err = client.Post(grantAccessURL(client, id), b, &r.Body, &gophercloud.RequestOpts{
-		OkCodes:     []int{200, 201},
-		MoreHeaders: map[string]string{"X-Openstack-Manila-Api-Version": client.Microversion},
+		OkCodes: []int{200, 201},
 	})
+	return
+}
+
+// GetExportLocations will get shareID's export locations
+func GetExportLocations(client *gophercloud.ServiceClient, id string) (r GetExportLocationsResult) {
+	if client.Microversion == nil {
+		err := gophercloud.ErrNoMicroversion{}
+		err.ServiceName = string(client.Type)
+		err.APIRequestName = getExportLocationsAPIRequestName
+		r.Err = err
+		return
+	}
+	minMicroversion, e := microver.New(getExportLocationsMinAPIMicroversion)
+	if e != nil {
+		err := gophercloud.BaseError{}
+		err.Info = fmt.Sprintf("Internal error: the %s API request for the %s service: %s", getExportLocationsAPIRequestName, string(client.Type), e.Error())
+		r.Err = err
+		return
+	}
+	if client.Microversion.LessThan(minMicroversion) {
+		err := gophercloud.ErrLowMicroversion{}
+		err.ServiceName = string(client.Type)
+		err.APIRequestName = getExportLocationsAPIRequestName
+		err.MinAPIMicroversion = getExportLocationsMinAPIMicroversion
+		err.CurrentAPIMicroversion = client.Microversion.String()
+		r.Err = err
+		return
+	}
+	_, r.Err = client.Get(getExportLocationsURL(client, id), &r.Body, nil)
 	return
 }
