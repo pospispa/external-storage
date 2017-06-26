@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
@@ -36,27 +37,33 @@ func devMockGetAllZones() (sets.String, error) {
 }
 
 func main() {
+	regionName := os.Getenv("OS_REGION_NAME")
+
 	authOpts, err := openstack.AuthOptionsFromEnv()
 	if err != nil {
 		fmt.Printf("AuthOptionsFromEnv failed: (%v)", err)
 		fmt.Println("")
 		return
 	}
+	fmt.Println("")
+	fmt.Printf("AuthOptionsFromEnv: (%v)", authOpts)
+	fmt.Println("")
 	provider, err := openstack.AuthenticatedClient(authOpts)
 	if err != nil {
 		fmt.Printf("AuthenticatedClient failed: (%v)", err)
 		fmt.Println("")
 		return
 	}
-	client, err := openstack.NewSharedFileSystemV2(provider, gophercloud.EndpointOpts{Region: "RegionOne"})
+	fmt.Println("")
+	fmt.Printf("Provider client: (%v)", provider)
+	fmt.Println("")
+	client, err := openstack.NewSharedFileSystemV2(provider, gophercloud.EndpointOpts{Region: regionName})
 	if err != nil {
 		fmt.Printf("NewSharedFileSystemV2 failed: (%v)", err)
 		fmt.Println("")
 		return
 	}
-	fmt.Printf("Provider client: (%v)", provider)
-	fmt.Println("")
-	fmt.Printf("Client: (%v)", client)
+	fmt.Printf("Service client: (%v)", client)
 	fmt.Println("")
 
 	pvc := controller.VolumeOptions{
@@ -77,6 +84,7 @@ func main() {
 		},
 		Parameters: map[string]string{sharedfilesystems.ZonesSCParamName: "nova"},
 	}
+
 	storageSize := "2G"
 	if quantity, err := resource.ParseQuantity(storageSize); err != nil {
 		fmt.Printf("Failed to parse storage size (%v): %v", storageSize, err)
@@ -111,11 +119,6 @@ func main() {
 		fmt.Println("")
 	}
 
-	//fmt.Println("")
-	//fmt.Printf("Sleep")
-	//fmt.Println("")
-	//time.Sleep(90000 * time.Millisecond)
-
 	var grantAccessReq shares.GrantAccessOpts
 	//grantAccessReq.ShareID = shareID
 	grantAccessReq.AccessType = "ip"
@@ -129,6 +132,27 @@ func main() {
 		return
 	} else {
 		fmt.Printf("Grant Access response: (%v)", grantAccessReqResponse)
+		fmt.Println("")
+	}
+
+	fmt.Println("")
+	var exportLocations []shares.ExportLocation
+	if getExportLocationsReqResponse, err := shares.GetExportLocations(client, shareID).ExtractExportLocations(); err != nil {
+		fmt.Printf("Response to get export locations request says failed: (%v)", err)
+		fmt.Println("")
+		return
+	} else {
+		fmt.Printf("Get Export Locations response: (%v)", getExportLocationsReqResponse)
+		fmt.Println("")
+		exportLocations = getExportLocationsReqResponse
+	}
+	if chosenLocation, err := sharedfilesystems.ChooseExportLocation(exportLocations); err != nil {
+		fmt.Println("")
+		fmt.Printf("Failed to choose an export location: %q", err.Error())
+		fmt.Println("")
+	} else {
+		fmt.Println("")
+		fmt.Printf("chosen export location: (%v)", chosenLocation)
 		fmt.Println("")
 	}
 }
