@@ -43,6 +43,34 @@ func (e ErrInvalidInput) Error() string {
 	return e.choseErrString()
 }
 
+// ErrNoMicroversion is the error when a service Microversion was not retrieved
+// and the particular request is not supported from X.0 version, but requires a higher microversion
+type ErrNoMicroversion struct {
+	BaseError
+	ServiceName    string
+	APIRequestName string
+}
+
+func (e ErrNoMicroversion) Error() string {
+	e.DefaultErrString = fmt.Sprintf("Internal error: %s service microversion was not retrieved that's why the %s API request cannot be successfully completed", e.ServiceName, e.APIRequestName)
+	return e.choseErrString()
+}
+
+// ErrLowMicroversion is the error when Shared Filesystes API Microversion
+// is too low to be used for a particular API request
+type ErrLowMicroversion struct {
+	BaseError
+	ServiceName            string
+	APIRequestName         string
+	MinAPIMicroversion     string
+	CurrentAPIMicroversion string
+}
+
+func (e ErrLowMicroversion) Error() string {
+	e.DefaultErrString = fmt.Sprintf("The %s API microversion is %s, however, in order to send the %s request the microversion must be at least %s.", e.ServiceName, e.CurrentAPIMicroversion, e.APIRequestName, e.MinAPIMicroversion)
+	return e.choseErrString()
+}
+
 // ErrUnexpectedResponseCode is returned by the Request method when a response code other than
 // those listed in OkCodes is encountered.
 type ErrUnexpectedResponseCode struct {

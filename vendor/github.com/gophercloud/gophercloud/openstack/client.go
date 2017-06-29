@@ -8,7 +8,9 @@ import (
 	"github.com/gophercloud/gophercloud"
 	tokens2 "github.com/gophercloud/gophercloud/openstack/identity/v2/tokens"
 	tokens3 "github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
+	sfsapi "github.com/gophercloud/gophercloud/openstack/sharedfilesystems/apiversions"
 	"github.com/gophercloud/gophercloud/openstack/utils"
+	microver "github.com/pospispa/openstackmicroversions"
 )
 
 const (
@@ -261,7 +263,21 @@ func NewBlockStorageV2(client *gophercloud.ProviderClient, eo gophercloud.Endpoi
 
 // NewSharedFileSystemV2 creates a ServiceClient that may be used to access the v2 shared file system service.
 func NewSharedFileSystemV2(client *gophercloud.ProviderClient, eo gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error) {
-	return initClientOpts(client, eo, "sharev2")
+	sc, err := initClientOpts(client, eo, "sharev2")
+	if err != nil {
+		return sc, err
+	}
+
+	apiVersion, err := sfsapi.Get(sc, "v2").Extract()
+	if err != nil {
+		return sc, err
+	}
+
+	if mcrVer, err := microver.New(apiVersion.Version); err == nil {
+		sc.Microversion = mcrVer
+	}
+
+	return sc, nil
 }
 
 // NewCDNV1 creates a ServiceClient that may be used to access the OpenStack v1

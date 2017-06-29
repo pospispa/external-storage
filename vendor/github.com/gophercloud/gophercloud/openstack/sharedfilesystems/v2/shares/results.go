@@ -110,3 +110,67 @@ type DeleteResult struct {
 type GetResult struct {
 	commonResult
 }
+
+// GrantAccessRes contains all information associated with an OpenStack share Grant Access
+type GrantAccessRes struct {
+	// The UUID of the share to which you are granted or denied access.
+	ShareID string `json:"share_id"`
+	// Timestamp when the share was created
+	CreatedAt time.Time `json:"created_at, omitempty"`
+	// Timestamp when the share was updated
+	UpdatedAt time.Time `json:"updated_at, omitempty"`
+	// The access rule type that can be "ip", "cert" or "user".
+	AccessType string `json:"access_type,omitempty"`
+	// The value that defines the access that can be a valid format of IP, cert or user.
+	AccessTo string `json:"access_to,omitempty"`
+	// The access credential of the entity granted share access.
+	AccessKey string `json:"access_key,omitempty"`
+	// The access level to the share is either "rw" or "ro".
+	AccessLevel string `json:"access_level,omitempty"`
+	// The state of the access rule
+	State string `json:"state,omitempty"`
+	// The access rule ID.
+	ID string `json:"id"`
+}
+
+// ExtractGrantAccess will get the GrantAccess object from the commonResult
+func (r commonResult) ExtractGrantAccess() (*GrantAccessRes, error) {
+	var s struct {
+		GrantAccessRes *GrantAccessRes `json:"access"`
+	}
+	err := r.ExtractInto(&s)
+	return s.GrantAccessRes, err
+}
+
+// GrantAccessResult contains the result.
+type GrantAccessResult struct {
+	commonResult
+}
+
+// ExportLocation contains all information associated with a share export location
+type ExportLocation struct {
+	// The export location path that should be used for mount operation.
+	Path string `json:"path"`
+	// The UUID of the share instance that this export location belongs to.
+	ShareInstanceID string `json:"share_instance_id"`
+	// Defines purpose of an export location. If set to true, then it is expected to be used for service needs and by administrators only. If it is set to false, then this export location can be used by end users.
+	IsAdminOnly bool `json:"is_admin_only"`
+	// The share export location UUID.
+	ID string `json:"id"`
+	// Drivers may use this field to identify which export locations are most efficient and should be used preferentially by clients. By default it is set to false value. New in version 2.14
+	Preferred bool `json:"preferred"`
+}
+
+// ExtractMicroversion will get the Specific API Version object from the commonResult
+func (r commonResult) ExtractExportLocations() ([]ExportLocation, error) {
+	var s struct {
+		GetExportLocationsRes []ExportLocation `json:"export_locations"`
+	}
+	err := r.ExtractInto(&s)
+	return s.GetExportLocationsRes, err
+}
+
+// GetExportLocationsResult contains the result.
+type GetExportLocationsResult struct {
+	commonResult
+}

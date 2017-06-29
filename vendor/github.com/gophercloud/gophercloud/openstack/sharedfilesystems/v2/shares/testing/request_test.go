@@ -7,6 +7,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/shares"
 	th "github.com/gophercloud/gophercloud/testhelper"
 	"github.com/gophercloud/gophercloud/testhelper/client"
+	microver "github.com/pospispa/openstackmicroversions"
 )
 
 func TestCreate(t *testing.T) {
@@ -79,6 +80,71 @@ func TestGet(t *testing.T) {
 				"href": "http://172.18.198.54:8786/16e1ab15c35a457e9c2b2aa189f544e1/shares/011d21e2-fbc3-4e4a-9993-9ea223f73264",
 				"rel":  "bookmark",
 			},
+		},
+	})
+}
+
+func TestGrantAcessSuccess(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+
+	MockGrantAccessResponse(t)
+
+	c := client.ServiceClient()
+	var err error
+	// Client c must have Microversion set; minimum supported microversion for Grant Access is 2.7
+	c.Microversion, err = microver.New("2.7")
+	if err != nil {
+		t.Errorf("Internal error: %s", err.Error())
+		return
+	}
+
+	var grantAccessReq shares.GrantAccessOpts
+	grantAccessReq.AccessType = "ip"
+	grantAccessReq.AccessTo = "0.0.0.0/0"
+	grantAccessReq.AccessLevel = "rw"
+
+	s, err := shares.GrantAccess(c, grantAccessReq, shareID).ExtractGrantAccess()
+
+	th.AssertNoErr(t, err)
+	th.AssertDeepEquals(t, s, &shares.GrantAccessRes{
+		ShareID:     "011d21e2-fbc3-4e4a-9993-9ea223f73264",
+		CreatedAt:   time.Date(2015, time.August, 27, 11, 33, 21, 0, time.UTC),
+		UpdatedAt:   time.Date(2015, time.August, 27, 11, 33, 21, 0, time.UTC),
+		AccessType:  "ip",
+		AccessTo:    "0.0.0.0/0",
+		AccessKey:   "",
+		AccessLevel: "rw",
+		State:       "new",
+		ID:          "a2f226a5-cee8-430b-8a03-78a59bd84ee8",
+	})
+}
+
+func TestGetExportLocationsSuccess(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+
+	MockGetExportLocationsResponse(t)
+
+	c := client.ServiceClient()
+	var err error
+	// Client c must have Microversion set; minimum supported microversion for Get Export Locations is 2.14
+	c.Microversion, err = microver.New("2.14")
+	if err != nil {
+		t.Errorf("Internal error: %s", err.Error())
+		return
+	}
+
+	s, err := shares.GetExportLocations(c, shareID).ExtractExportLocations()
+
+	th.AssertNoErr(t, err)
+	th.AssertDeepEquals(t, s, []shares.ExportLocation{
+		{
+			Path:            "127.0.0.1:/var/lib/manila/mnt/share-9a922036-ad26-4d27-b955-7a1e285fa74d",
+			ShareInstanceID: "011d21e2-fbc3-4e4a-9993-9ea223f73264",
+			IsAdminOnly:     false,
+			ID:              "80ed63fc-83bc-4afc-b881-da4a345ac83d",
+			Preferred:       false,
 		},
 	})
 }
