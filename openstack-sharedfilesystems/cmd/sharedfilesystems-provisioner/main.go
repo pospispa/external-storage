@@ -128,4 +128,25 @@ func main() {
 		fmt.Printf("Grant Access response: (%v)", grantAccessReqResponse)
 		fmt.Println("")
 	}
+
+	fmt.Println("")
+	var exportLocations []shares.ExportLocation
+	if getExportLocationsReqResponse, err := shares.GetExportLocations(client, shareID).ExtractExportLocations(); err != nil {
+		fmt.Printf("Response to get export locations request says failed: (%v)", err)
+		fmt.Println("")
+		return
+	} else {
+		fmt.Printf("Get Export Locations response: (%v)", getExportLocationsReqResponse)
+		fmt.Println("")
+		exportLocations = getExportLocationsReqResponse
+	}
+	if chosenLocation, err := sharedfilesystems.ChooseExportLocation(exportLocations); err != nil {
+		fmt.Println("")
+		fmt.Printf("Failed to choose an export location: %q", err.Error())
+		fmt.Println("")
+	} else {
+		fmt.Println("")
+		fmt.Printf("chosen export location: (%v)", chosenLocation)
+		fmt.Println("")
+	}
 }
