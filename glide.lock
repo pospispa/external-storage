@@ -1,5 +1,5 @@
-hash: d11912d06c6f87d2eb1790745dac89d490de82cb0b457a7d9cbaa8075bcc76e7
-updated: 2017-07-14T11:17:40.375673439+02:00
+hash: e3c3ee0e8afe50098a1b8bec7e066fcb9aa79fd42c5c99c0acfcbf61262ec519
+updated: 2017-07-14T11:33:01.544144919+02:00
 imports:
 - name: github.com/aws/aws-sdk-go
   version: 1fd5dd46e2bf3e0be156701a559098dc823053d5
@@ -37,11 +37,6 @@ imports:
   - spew
 - name: github.com/dgrijalva/jwt-go
   version: 01aeca54ebda6e0fbfafd0a524d234159c05ec20
-- name: github.com/docker/distribution
-  version: cd27f179f2c10c5d300e6d09025b538c475b0d51
-  subpackages:
-  - digest
-  - reference
 - name: github.com/docker/docker
   version: 092cba3727bb9b4a2f0e922cd6c0f93ea270e363
   subpackages:
@@ -119,6 +114,8 @@ imports:
   version: db1efb556f84b25a0a13a04aad883943538ad2e0
 - name: github.com/pborman/uuid
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
+- name: github.com/pospispa/openstackmicroversions
+  version: 011877b4c9ea30ae0b60968e609535ee29f1f7c4
 - name: github.com/PuerkitoBio/purell
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
@@ -132,6 +129,7 @@ imports:
 - name: golang.org/x/crypto
   version: d172538b2cfce0c13cee31e647d0367aa8cd2486
   subpackages:
+  - ssh
   - ssh/terminal
 - name: golang.org/x/net
   version: f2499483f923065a842d38eb4c7f1927e6fc6e6d
@@ -222,7 +220,6 @@ imports:
   - pkg/util/json
   - pkg/util/mergepatch
   - pkg/util/net
-  - pkg/util/rand
   - pkg/util/runtime
   - pkg/util/sets
   - pkg/util/strategicpatch
@@ -284,14 +281,10 @@ imports:
   subpackages:
   - pkg/api
   - pkg/api/helper
-  - pkg/api/v1
   - pkg/api/v1/helper
-  - pkg/apis/extensions
   - pkg/kubelet/apis
-  - pkg/util
   - pkg/util/goroutinemap
   - pkg/util/goroutinemap/exponentialbackoff
-  - pkg/util/parsers
   - pkg/util/sets
   - pkg/util/version
   - pkg/volume

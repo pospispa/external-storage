@@ -63,3 +63,8 @@ import:
   - openstack
   - openstack/sharedfilesystems/v2/shares
   - openstack/sharedfilesystems/v2/shares/testing
+- package: github.com/pospispa/openstackmicroversions
+- package: golang.org/x/crypto
+  subpackages:
+  - ssh
+- package: gopkg.in/yaml.v2
