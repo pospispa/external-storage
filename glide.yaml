@@ -68,3 +68,14 @@ import:
   subpackages:
   - ssh
 - package: gopkg.in/yaml.v2
+- package: github.com/docker/distribution
+  subpackages:
+  - reference
+- package: github.com/exponent-io/jsonpath
+- package: k8s.io/apiserver
+  subpackages:
+  - pkg/authentication/authenticator
+  - pkg/authentication/serviceaccount
+  - pkg/authentication/user
+  - pkg/features
+  - pkg/util/feature
