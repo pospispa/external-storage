@@ -47,12 +47,19 @@ import:
   subpackages:
   - pkg/util/goroutinemap
   - pkg/util/version
-- package: github.com/heketi/heketi/client/api/go-client
+  - pkg/util/sets
+  - pkg/volume
+- package: github.com/heketi/heketi
   version: 7a54b6fc903feab1e7cb6573177ca09b544eb1e2
-- package: github.com/heketi/heketi/pkg/glusterfs/api
-  version: 7a54b6fc903feab1e7cb6573177ca09b544eb1e2
-- package: github.com/heketi/heketi/pkg/utils
-  version: 7a54b6fc903feab1e7cb6573177ca09b544eb1e2
+  subpackages:
+  - client/api/go-client
+  - pkg/glusterfs/api
+  - pkg/utils
 - package: github.com/lpabon/godbc
   version: 9577782540c1398b710ddae1b86268ba03a19b0c
 - package: github.com/dgrijalva/jwt-go
+- package: github.com/gophercloud/gophercloud
+  subpackages:
+  - openstack
+  - openstack/sharedfilesystems/v2/shares
+  - openstack/sharedfilesystems/v2/shares/testing

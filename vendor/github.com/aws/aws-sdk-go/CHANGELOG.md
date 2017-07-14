@@ -1,3 +1,22 @@
+Release v1.10.10 (2017-07-13)
+===
+
+### Service Client Updates
+* `service/apigateway`: Updates service API and documentation
+  * Adds support for management of gateway responses.
+* `service/ec2`: Updates service API and documentation
+  * X-ENI (or Cross-Account ENI) is a new feature that allows the attachment or association of Elastic Network Interfaces (ENI) between VPCs in different AWS accounts located in the same availability zone. With this new capability, service providers and partners can deliver managed solutions in a variety of new architectural patterns where the provider and consumer of the service are in different AWS accounts.
+* `service/lex-models`: Updates service documentation
+
+Release v1.10.9 (2017-07-12)
+===
+
+### Service Client Updates
+* `service/autoscaling`: Updates service API and documentation
+  * Auto Scaling now supports a new type of scaling policy called target tracking scaling policies that you can use to set up dynamic scaling for your application.
+* `service/swf`: Updates service API, documentation, paginators, and examples
+  * Added support for attaching control data to Lambda tasks. Control data lets you attach arbitrary strings to your decisions and history events.
+
 Release v1.10.8 (2017-07-06)
 ===
 
