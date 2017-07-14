@@ -150,4 +150,17 @@ func main() {
 		fmt.Printf("WaitTillAvailable returned no error")
 		fmt.Println("")
 	}
+
+	var grantAccessReq shares.GrantAccessOpts
+	grantAccessReq.AccessType = "ip"
+	grantAccessReq.AccessTo = "0.0.0.0/0"
+	grantAccessReq.AccessLevel = "rw"
+	if grantAccessReqResponse, err := shares.GrantAccess(client, shareID, grantAccessReq).Extract(); err != nil {
+		fmt.Printf("Response to grant access request says failed: (%v)", err)
+		fmt.Println("")
+		return
+	} else {
+		fmt.Printf("Grant Access response: (%v)", grantAccessReqResponse)
+		fmt.Println("")
+	}
 }
