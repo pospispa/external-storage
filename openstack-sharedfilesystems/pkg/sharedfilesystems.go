@@ -26,6 +26,7 @@ import (
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubernetes/pkg/controller/volume/persistentvolume"
 	"k8s.io/kubernetes/pkg/volume"
@@ -40,6 +41,11 @@ const (
 	TypeSCParamName = "type"
 	// ProtocolNFS is the NFS shared filesystems protocol
 	ProtocolNFS = "NFS"
+	// ManilaAnnotationName is a string that identifies Manila external provisioner custom data
+	// stored in Persistent Volume annotations
+	ManilaAnnotationName = "manila.external-storage.incubator.kubernetes.io/"
+	// ManilaAnnotationShareIDName identifies provisioned Share ID
+	ManilaAnnotationShareIDName = ManilaAnnotationName + "ID"
 )
 
 func getPVCStorageSize(pvc *v1.PersistentVolumeClaim) (int, error) {
@@ -166,4 +172,60 @@ func ChooseExportLocation(locs []shares.ExportLocation) (shares.ExportLocation, 
 		return matchingNotPreferred, nil
 	}
 	return shares.ExportLocation{}, fmt.Errorf("cannot find any non-admin export location")
+}
+
+// FillInPV creates the PV data structure from original PVC, provisioned share and the share export location
+func FillInPV(options controller.VolumeOptions, share shares.Share, exportLocation shares.ExportLocation) (*v1.PersistentVolume, error) {
+
+	storageSize := resource.MustParse(fmt.Sprintf("%dG", share.Size))
+	PVAccessMode := getPVAccessMode(options.PVC.Spec.AccessModes)
+	server, path, err := getServerAndPath(exportLocation.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	pv := &v1.PersistentVolume{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: options.PVName,
+			Annotations: map[string]string{
+				ManilaAnnotationShareIDName: share.ID,
+			},
+		},
+		Spec: v1.PersistentVolumeSpec{
+			PersistentVolumeReclaimPolicy: options.PersistentVolumeReclaimPolicy,
+			AccessModes:                   PVAccessMode,
+			Capacity: v1.ResourceList{
+				v1.ResourceStorage: storageSize,
+			},
+			PersistentVolumeSource: v1.PersistentVolumeSource{
+				NFS: &v1.NFSVolumeSource{
+					Server:   server,
+					Path:     path,
+					ReadOnly: false,
+				},
+			},
+		},
+	}
+
+	return pv, nil
+}
+
+// FIXME: for IPv6
+func getServerAndPath(exportLocationPath string) (string, string, error) {
+	split := strings.SplitN(exportLocationPath, ":", 2)
+	if len(split) == 2 {
+		return split[0], split[1], nil
+	}
+	return "", "", fmt.Errorf("failed to split export location %q into server and path parts", exportLocationPath)
+}
+
+func getPVAccessMode(PVCAccessMode []v1.PersistentVolumeAccessMode) []v1.PersistentVolumeAccessMode {
+	if len(PVCAccessMode) > 0 {
+		return PVCAccessMode
+	}
+	return []v1.PersistentVolumeAccessMode{
+		v1.ReadWriteOnce,
+		v1.ReadOnlyMany,
+		v1.ReadWriteMany,
+	}
 }

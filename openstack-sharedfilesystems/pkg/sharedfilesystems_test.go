@@ -19,6 +19,7 @@ package sharedfilesystems
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -34,9 +35,15 @@ import (
 )
 
 const (
+	fakeUID           = types.UID("unique-uid")
+	fakeShareName     = "pvc-" + string(fakeUID)
+	fakePVCName       = "pvc"
+	fakeNamespace     = "foo"
+	fakeShareID       = "de64eb77-05cb-4502-a6e5-7e8552c352f3"
 	fakeReclaimPolicy = "Delete"
 	fakeZoneName      = "nova"
 	fakePVName        = "pv"
+	fakeShareTypeName = "default"
 )
 
 func mockGetAllZones() (sets.String, error) {
@@ -47,11 +54,6 @@ func mockGetAllZones() (sets.String, error) {
 func TestPrepareCreateRequest(t *testing.T) {
 	functionUnderTest := "PrepareCreateRequest"
 
-	fakeUID := types.UID("unique-uid")
-	fakeShareName := "pvc-" + string(fakeUID)
-	fakePVCName := "pvc"
-	fakeNamespace := "foo"
-
 	zonesForSCMultiZoneTestCase := "nova1, nova2, nova3"
 	setOfZonesForSCMultiZoneTestCase, _ := util.ZonesToSet(zonesForSCMultiZoneTestCase)
 	pvcNameForSCMultiZoneTestCase := "pvc"
@@ -60,7 +62,6 @@ func TestPrepareCreateRequest(t *testing.T) {
 	allClusterZonesForSCNoZonesSpecifiedTestCase, _ := mockGetAllZones()
 	expectedResultForSCNoZonesSpecifiedTestCase := volume.ChooseZoneForVolume(allClusterZonesForSCNoZonesSpecifiedTestCase, pvcNameForSCNoZonesSpecifiedTestCase)
 	succCaseStorageSize, _ := resource.ParseQuantity("2G")
-	fakeShareTypeName := "default"
 	// First part: want no error
 	succCases := []struct {
 		volumeOptions controller.VolumeOptions
@@ -69,8 +70,8 @@ func TestPrepareCreateRequest(t *testing.T) {
 		// Will very probably start failing if the func volume.ChooseZoneForVolume is replaced by another function in the implementation
 		{
 			volumeOptions: controller.VolumeOptions{
-				PersistentVolumeReclaimPolicy: "Delete",
-				PVName: "pv",
+				PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+				PVName: fakePVName,
 				PVC: &v1.PersistentVolumeClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      pvcNameForSCNoZonesSpecifiedTestCase,
@@ -95,8 +96,8 @@ func TestPrepareCreateRequest(t *testing.T) {
 		},
 		{
 			volumeOptions: controller.VolumeOptions{
-				PersistentVolumeReclaimPolicy: "Delete",
-				PVName: "pv",
+				PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+				PVName: fakePVName,
 				PVC: &v1.PersistentVolumeClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fakePVCName,
@@ -110,19 +111,19 @@ func TestPrepareCreateRequest(t *testing.T) {
 						},
 					},
 				},
-				Parameters: map[string]string{ZonesSCParamName: "nova"},
+				Parameters: map[string]string{ZonesSCParamName: fakeZoneName},
 			},
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
 				Name:             fakeShareName,
-				AvailabilityZone: "nova",
+				AvailabilityZone: fakeZoneName,
 				Size:             2,
 			},
 		},
 		{
 			volumeOptions: controller.VolumeOptions{
-				PersistentVolumeReclaimPolicy: "Delete",
-				PVName: "pv",
+				PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+				PVName: fakePVName,
 				PVC: &v1.PersistentVolumeClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fakePVCName,
@@ -136,20 +137,20 @@ func TestPrepareCreateRequest(t *testing.T) {
 						},
 					},
 				},
-				Parameters: map[string]string{"ZoNes": "nova"},
+				Parameters: map[string]string{"ZoNes": fakeZoneName},
 			},
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
 				Name:             fakeShareName,
-				AvailabilityZone: "nova",
+				AvailabilityZone: fakeZoneName,
 				Size:             2,
 			},
 		},
 		// Will very probably start failing if the func volume.ChooseZoneForVolume is replaced by another function in the implementation
 		{
 			volumeOptions: controller.VolumeOptions{
-				PersistentVolumeReclaimPolicy: "Delete",
-				PVName: "pv",
+				PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+				PVName: fakePVName,
 				PVC: &v1.PersistentVolumeClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      pvcNameForSCMultiZoneTestCase,
@@ -175,8 +176,8 @@ func TestPrepareCreateRequest(t *testing.T) {
 		// PVC accessModes parameters are being ignored.
 		{
 			volumeOptions: controller.VolumeOptions{
-				PersistentVolumeReclaimPolicy: "Delete",
-				PVName: "pv",
+				PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+				PVName: fakePVName,
 				PVC: &v1.PersistentVolumeClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fakePVCName,
@@ -191,20 +192,20 @@ func TestPrepareCreateRequest(t *testing.T) {
 						},
 					},
 				},
-				Parameters: map[string]string{ZonesSCParamName: "nova"},
+				Parameters: map[string]string{ZonesSCParamName: fakeZoneName},
 			},
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
 				Name:             fakeShareName,
-				AvailabilityZone: "nova",
+				AvailabilityZone: fakeZoneName,
 				Size:             2,
 			},
 		},
 		// In case the requested storage size in GB is not a whole number because of the chosen units the storage size in GB is rounded up to the nearest integer
 		{
 			volumeOptions: controller.VolumeOptions{
-				PersistentVolumeReclaimPolicy: "Delete",
-				PVName: "pv",
+				PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+				PVName: fakePVName,
 				PVC: &v1.PersistentVolumeClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fakePVCName,
@@ -218,20 +219,20 @@ func TestPrepareCreateRequest(t *testing.T) {
 						},
 					},
 				},
-				Parameters: map[string]string{ZonesSCParamName: "nova"},
+				Parameters: map[string]string{ZonesSCParamName: fakeZoneName},
 			},
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
 				Name:             fakeShareName,
-				AvailabilityZone: "nova",
+				AvailabilityZone: fakeZoneName,
 				Size:             3,
 			},
 		},
 		// In case the requested storage size is not a whole number the storage size is rounded up to the nearest integer
 		{
 			volumeOptions: controller.VolumeOptions{
-				PersistentVolumeReclaimPolicy: "Delete",
-				PVName: "pv",
+				PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+				PVName: fakePVName,
 				PVC: &v1.PersistentVolumeClaim{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fakePVCName,
@@ -245,12 +246,12 @@ func TestPrepareCreateRequest(t *testing.T) {
 						},
 					},
 				},
-				Parameters: map[string]string{ZonesSCParamName: "nova"},
+				Parameters: map[string]string{ZonesSCParamName: fakeZoneName},
 			},
 			want: shares.CreateOpts{
 				ShareProto:       ProtocolNFS,
 				Name:             fakeShareName,
-				AvailabilityZone: "nova",
+				AvailabilityZone: fakeZoneName,
 				Size:             3,
 			},
 		},
@@ -304,8 +305,8 @@ func TestPrepareCreateRequest(t *testing.T) {
 		{
 			testCaseName: "unknown Storage Class option",
 			volumeOptions: controller.VolumeOptions{
-				PersistentVolumeReclaimPolicy: "Delete",
-				PVName: "pv",
+				PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+				PVName: fakePVName,
 				PVC: &v1.PersistentVolumeClaim{
 					ObjectMeta: metav1.ObjectMeta{Name: "pvc", Namespace: "foo"},
 					Spec: v1.PersistentVolumeClaimSpec{
@@ -322,8 +323,8 @@ func TestPrepareCreateRequest(t *testing.T) {
 		{
 			testCaseName: "zero storage capacity",
 			volumeOptions: controller.VolumeOptions{
-				PersistentVolumeReclaimPolicy: "Delete",
-				PVName: "pv",
+				PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+				PVName: fakePVName,
 				PVC: &v1.PersistentVolumeClaim{
 					ObjectMeta: metav1.ObjectMeta{Name: "pvc", Namespace: "foo"},
 					Spec: v1.PersistentVolumeClaimSpec{
@@ -340,8 +341,8 @@ func TestPrepareCreateRequest(t *testing.T) {
 		{
 			testCaseName: "negative storage capacity",
 			volumeOptions: controller.VolumeOptions{
-				PersistentVolumeReclaimPolicy: "Delete",
-				PVName: "pv",
+				PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+				PVName: fakePVName,
 				PVC: &v1.PersistentVolumeClaim{
 					ObjectMeta: metav1.ObjectMeta{Name: "pvc", Namespace: "foo"},
 					Spec: v1.PersistentVolumeClaimSpec{
@@ -365,8 +366,8 @@ func TestPrepareCreateRequest(t *testing.T) {
 	// Third part: want an error
 	errCasesStorageSizeNotConfigured := []controller.VolumeOptions{
 		{
-			PersistentVolumeReclaimPolicy: "Delete",
-			PVName: "pv",
+			PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+			PVName: fakePVName,
 			PVC: &v1.PersistentVolumeClaim{
 				ObjectMeta: metav1.ObjectMeta{Name: "pvc", Namespace: "foo"},
 				Spec:       v1.PersistentVolumeClaimSpec{},
@@ -374,8 +375,8 @@ func TestPrepareCreateRequest(t *testing.T) {
 			Parameters: map[string]string{},
 		},
 		{
-			PersistentVolumeReclaimPolicy: "Delete",
-			PVName: "pv",
+			PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+			PVName: fakePVName,
 			PVC: &v1.PersistentVolumeClaim{
 				ObjectMeta: metav1.ObjectMeta{Name: "pvc", Namespace: "foo"},
 				Spec: v1.PersistentVolumeClaimSpec{
@@ -583,5 +584,303 @@ func TestChooseExportLocationNotFound(t *testing.T) {
 		if got, err := ChooseExportLocation(tt.locs); err == nil {
 			t.Errorf("%q ChooseExportLocation(%v) = (%v, nil) want (\"N/A\", \"an error\")", tt.testCaseName, tt.locs, got)
 		}
+	}
+}
+
+func TestFillInPV(t *testing.T) {
+	functionUnderTest := "FillInPV"
+	tests := []struct {
+		testCaseName   string
+		volumeOptions  controller.VolumeOptions
+		share          shares.Share
+		exportLocation shares.ExportLocation
+		want           *v1.PersistentVolume
+	}{
+		{
+			testCaseName: "Storage size in GB is a whole number",
+			volumeOptions: controller.VolumeOptions{
+				PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+				PVName: fakePVName,
+				PVC: &v1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fakePVCName,
+						Namespace: fakeNamespace,
+						UID:       fakeUID},
+					Spec: v1.PersistentVolumeClaimSpec{
+						Resources: v1.ResourceRequirements{
+							Requests: v1.ResourceList{
+								v1.ResourceStorage: resource.MustParse("2G"),
+							},
+						},
+					},
+				},
+				Parameters: map[string]string{ZonesSCParamName: fakeZoneName},
+			},
+			share: shares.Share{
+				AvailabilityZone:   fakeZoneName,
+				Description:        "",
+				DisplayDescription: "",
+				DisplayName:        "",
+				HasReplicas:        false,
+				Host:               "",
+				ID:                 fakeShareID,
+				IsPublic:           false,
+				Links: []map[string]string{
+					{"href:http://controller:8786/v2/ecbc0da9369f41e3a8a17e49a425ff2d/shares/de64eb77-05cb-4502-a6e5-7e8552c352f3": "rel:self"},
+					{"href:http://controller:8786/ecbc0da9369f41e3a8a17e49a425ff2d/shares/de64eb77-05cb-4502-a6e5-7e8552c352f3": "rel:bookmark"},
+				},
+				Metadata:                 map[string]string{persistentvolume.CloudVolumeCreatedForClaimNamespaceTag: fakeNamespace, persistentvolume.CloudVolumeCreatedForClaimNameTag: fakePVCName, persistentvolume.CloudVolumeCreatedForVolumeNameTag: fakeShareName},
+				Name:                     fakeShareName,
+				ProjectID:                "ecbc0da9369f41e3a8a17e49a425ff2d",
+				ReplicationType:          "",
+				ShareNetworkID:           "",
+				ShareProto:               ProtocolNFS,
+				ShareServerID:            "",
+				ShareType:                "e60e2fa9-d2e8-4772-b24b-c45a54e05e53",
+				ShareTypeName:            "default_share_type",
+				Size:                     2,
+				SnapshotID:               "",
+				Status:                   "creating",
+				TaskState:                "",
+				VolumeType:               "default_share_type",
+				ConsistencyGroupID:       "",
+				SnapshotSupport:          true,
+				SourceCgsnapshotMemberID: "",
+				CreatedAt:                time.Date(2015, time.August, 27, 11, 33, 21, 0, time.UTC),
+			},
+			exportLocation: shares.ExportLocation{
+				Path:            "127.0.0.1:/var/lib/manila/mnt/share-0ee809f3-edd3-4603-973a-8049311f8d00",
+				ShareInstanceID: "",
+				IsAdminOnly:     false,
+				ID:              "68e3aeb3-0c8f-4a55-804f-ee2d26ebf814",
+				Preferred:       false,
+			},
+			want: &v1.PersistentVolume{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: fakePVName,
+					Annotations: map[string]string{
+						ManilaAnnotationShareIDName: fakeShareID,
+					},
+				},
+				Spec: v1.PersistentVolumeSpec{
+					PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+					AccessModes: []v1.PersistentVolumeAccessMode{
+						v1.ReadWriteOnce,
+						v1.ReadOnlyMany,
+						v1.ReadWriteMany,
+					},
+					Capacity: v1.ResourceList{
+						v1.ResourceStorage: resource.MustParse("2G"),
+					},
+					PersistentVolumeSource: v1.PersistentVolumeSource{
+						NFS: &v1.NFSVolumeSource{
+							Server:   "127.0.0.1",
+							Path:     "/var/lib/manila/mnt/share-0ee809f3-edd3-4603-973a-8049311f8d00",
+							ReadOnly: false,
+						},
+					},
+				},
+			},
+		},
+		{
+			testCaseName: "Storage size in GB must be rounded up",
+			volumeOptions: controller.VolumeOptions{
+				PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+				PVName: fakePVName,
+				PVC: &v1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fakePVCName,
+						Namespace: fakeNamespace,
+						UID:       fakeUID},
+					Spec: v1.PersistentVolumeClaimSpec{
+						Resources: v1.ResourceRequirements{
+							Requests: v1.ResourceList{
+								v1.ResourceStorage: resource.MustParse("2Gi"),
+							},
+						},
+					},
+				},
+				Parameters: map[string]string{ZonesSCParamName: fakeZoneName},
+			},
+			share: shares.Share{
+				AvailabilityZone:   fakeZoneName,
+				Description:        "",
+				DisplayDescription: "",
+				DisplayName:        "",
+				HasReplicas:        false,
+				Host:               "",
+				ID:                 fakeShareID,
+				IsPublic:           false,
+				Links: []map[string]string{
+					{"href:http://controller:8786/v2/ecbc0da9369f41e3a8a17e49a425ff2d/shares/de64eb77-05cb-4502-a6e5-7e8552c352f3": "rel:self"},
+					{"href:http://controller:8786/ecbc0da9369f41e3a8a17e49a425ff2d/shares/de64eb77-05cb-4502-a6e5-7e8552c352f3": "rel:bookmark"},
+				},
+				Metadata:                 map[string]string{persistentvolume.CloudVolumeCreatedForClaimNamespaceTag: fakeNamespace, persistentvolume.CloudVolumeCreatedForClaimNameTag: fakePVCName, persistentvolume.CloudVolumeCreatedForVolumeNameTag: fakeShareName},
+				Name:                     fakeShareName,
+				ProjectID:                "ecbc0da9369f41e3a8a17e49a425ff2d",
+				ReplicationType:          "",
+				ShareNetworkID:           "",
+				ShareProto:               ProtocolNFS,
+				ShareServerID:            "",
+				ShareType:                "e60e2fa9-d2e8-4772-b24b-c45a54e05e53",
+				ShareTypeName:            "default_share_type",
+				Size:                     3,
+				SnapshotID:               "",
+				Status:                   "creating",
+				TaskState:                "",
+				VolumeType:               "default_share_type",
+				ConsistencyGroupID:       "",
+				SnapshotSupport:          true,
+				SourceCgsnapshotMemberID: "",
+				CreatedAt:                time.Date(2015, time.August, 27, 11, 33, 21, 0, time.UTC),
+			},
+			exportLocation: shares.ExportLocation{
+				Path:            "127.0.0.1:/var/lib/manila/mnt/share-0ee809f3-edd3-4603-973a-8049311f8d00",
+				ShareInstanceID: "",
+				IsAdminOnly:     false,
+				ID:              "68e3aeb3-0c8f-4a55-804f-ee2d26ebf814",
+				Preferred:       false,
+			},
+			want: &v1.PersistentVolume{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: fakePVName,
+					Annotations: map[string]string{
+						ManilaAnnotationShareIDName: fakeShareID,
+					},
+				},
+				Spec: v1.PersistentVolumeSpec{
+					PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+					AccessModes: []v1.PersistentVolumeAccessMode{
+						v1.ReadWriteOnce,
+						v1.ReadOnlyMany,
+						v1.ReadWriteMany,
+					},
+					Capacity: v1.ResourceList{
+						v1.ResourceStorage: resource.MustParse("3G"),
+					},
+					PersistentVolumeSource: v1.PersistentVolumeSource{
+						NFS: &v1.NFSVolumeSource{
+							Server:   "127.0.0.1",
+							Path:     "/var/lib/manila/mnt/share-0ee809f3-edd3-4603-973a-8049311f8d00",
+							ReadOnly: false,
+						},
+					},
+				},
+			},
+		},
+		{
+			testCaseName: "Access Mode is configured in PVC",
+			volumeOptions: controller.VolumeOptions{
+				PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+				PVName: fakePVName,
+				PVC: &v1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fakePVCName,
+						Namespace: fakeNamespace,
+						UID:       fakeUID},
+					Spec: v1.PersistentVolumeClaimSpec{
+						AccessModes: []v1.PersistentVolumeAccessMode{
+							v1.ReadOnlyMany,
+							v1.ReadWriteOnce,
+						},
+						Resources: v1.ResourceRequirements{
+							Requests: v1.ResourceList{
+								v1.ResourceStorage: resource.MustParse("2G"),
+							},
+						},
+					},
+				},
+				Parameters: map[string]string{ZonesSCParamName: fakeZoneName},
+			},
+			share: shares.Share{
+				AvailabilityZone:   fakeZoneName,
+				Description:        "",
+				DisplayDescription: "",
+				DisplayName:        "",
+				HasReplicas:        false,
+				Host:               "",
+				ID:                 fakeShareID,
+				IsPublic:           false,
+				Links: []map[string]string{
+					{"href:http://controller:8786/v2/ecbc0da9369f41e3a8a17e49a425ff2d/shares/de64eb77-05cb-4502-a6e5-7e8552c352f3": "rel:self"},
+					{"href:http://controller:8786/ecbc0da9369f41e3a8a17e49a425ff2d/shares/de64eb77-05cb-4502-a6e5-7e8552c352f3": "rel:bookmark"},
+				},
+				Metadata:                 map[string]string{persistentvolume.CloudVolumeCreatedForClaimNamespaceTag: fakeNamespace, persistentvolume.CloudVolumeCreatedForClaimNameTag: fakePVCName, persistentvolume.CloudVolumeCreatedForVolumeNameTag: fakeShareName},
+				Name:                     fakeShareName,
+				ProjectID:                "ecbc0da9369f41e3a8a17e49a425ff2d",
+				ReplicationType:          "",
+				ShareNetworkID:           "",
+				ShareProto:               ProtocolNFS,
+				ShareServerID:            "",
+				ShareType:                "e60e2fa9-d2e8-4772-b24b-c45a54e05e53",
+				ShareTypeName:            "default_share_type",
+				Size:                     2,
+				SnapshotID:               "",
+				Status:                   "creating",
+				TaskState:                "",
+				VolumeType:               "default_share_type",
+				ConsistencyGroupID:       "",
+				SnapshotSupport:          true,
+				SourceCgsnapshotMemberID: "",
+				CreatedAt:                time.Date(2015, time.August, 27, 11, 33, 21, 0, time.UTC),
+			},
+			exportLocation: shares.ExportLocation{
+				Path:            "127.0.0.1:/var/lib/manila/mnt/share-0ee809f3-edd3-4603-973a-8049311f8d00",
+				ShareInstanceID: "",
+				IsAdminOnly:     false,
+				ID:              "68e3aeb3-0c8f-4a55-804f-ee2d26ebf814",
+				Preferred:       false,
+			},
+			want: &v1.PersistentVolume{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: fakePVName,
+					Annotations: map[string]string{
+						ManilaAnnotationShareIDName: fakeShareID,
+					},
+				},
+				Spec: v1.PersistentVolumeSpec{
+					PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+					AccessModes: []v1.PersistentVolumeAccessMode{
+						v1.ReadOnlyMany,
+						v1.ReadWriteOnce,
+					},
+					Capacity: v1.ResourceList{
+						v1.ResourceStorage: resource.MustParse("2G"),
+					},
+					PersistentVolumeSource: v1.PersistentVolumeSource{
+						NFS: &v1.NFSVolumeSource{
+							Server:   "127.0.0.1",
+							Path:     "/var/lib/manila/mnt/share-0ee809f3-edd3-4603-973a-8049311f8d00",
+							ReadOnly: false,
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		if got, err := FillInPV(tt.volumeOptions, tt.share, tt.exportLocation); err != nil {
+			t.Errorf("Test case: %q; %v(%v, %v, %v) = (%v, %v) WANT (%v, nil)", tt.testCaseName, functionUnderTest, tt.volumeOptions, tt.share, tt.exportLocation, got, err.Error(), tt.want)
+		} else if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("Test case: %q; %v(%v, %v, %v) = (%v, %v) WANT (%v, nil)", tt.testCaseName, functionUnderTest, tt.volumeOptions, tt.share, tt.exportLocation, got, err, tt.want)
+		}
+	}
+}
+
+func TestGetServerAndPath(t *testing.T) {
+	functionUnderTest := "getServerAndPath"
+	// want success
+	exportLocationPath := "10.0.0.2:/var/lib/manila-shares/mnt/share-0ee809f3-edd3-4603-973a-8049311f8d00"
+	wantServer := "10.0.0.2"
+	wantPath := "/var/lib/manila-shares/mnt/share-0ee809f3-edd3-4603-973a-8049311f8d00"
+	if gotServer, gotPath, err := getServerAndPath(exportLocationPath); err != nil {
+		t.Errorf("%v(%q) = (%q, %q, %q) WANT (%q, %q, nil)", functionUnderTest, exportLocationPath, gotServer, gotPath, err.Error(), wantServer, wantPath)
+	} else if gotServer != wantServer || gotPath != wantPath {
+		t.Errorf("%v(%q) = (%q, %q, %q) WANT (%q, %q, nil)", functionUnderTest, exportLocationPath, gotServer, gotPath, err, wantServer, wantPath)
+	}
+	// want an error
+	exportLocationPath = "127.0.0.1string/without/colon"
+	if gotServer, gotPath, err := getServerAndPath(exportLocationPath); err == nil {
+		t.Errorf("%v(%q) = (%q, %q, %q) WANT (\"\", \"\", \"an error\")", functionUnderTest, exportLocationPath, gotServer, gotPath, err)
 	}
 }
