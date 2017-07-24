@@ -128,7 +128,7 @@ func main() {
 	} else {
 		pvc.PVC.Spec.Resources.Requests[v1.ResourceStorage] = quantity
 	}
-	var shareID string
+	var createdShare shares.Share
 	if createReq, err := sharedfilesystems.PrepareCreateRequest(pvc, devMockGetAllZones); err != nil {
 		fmt.Printf("Failed to create Create Request: (%v)", err)
 	} else {
@@ -141,11 +141,11 @@ func main() {
 		} else {
 			fmt.Printf("Create response: (%v)", createReqResponse)
 			fmt.Println("")
-			shareID = createReqResponse.ID
+			createdShare = *createReqResponse
 		}
 	}
 	fmt.Println("")
-	if err = sharedfilesystems.WaitTillAvailable(client, shareID); err != nil {
+	if err = sharedfilesystems.WaitTillAvailable(client, createdShare.ID); err != nil {
 		fmt.Printf("Response to WaitTillAvailable says failed: (%v)", err)
 		fmt.Println("")
 		return
@@ -158,7 +158,7 @@ func main() {
 	grantAccessReq.AccessType = "ip"
 	grantAccessReq.AccessTo = "0.0.0.0/0"
 	grantAccessReq.AccessLevel = "rw"
-	if grantAccessReqResponse, err := shares.GrantAccess(client, shareID, grantAccessReq).Extract(); err != nil {
+	if grantAccessReqResponse, err := shares.GrantAccess(client, createdShare.ID, grantAccessReq).Extract(); err != nil {
 		fmt.Printf("Response to grant access request says failed: (%v)", err)
 		fmt.Println("")
 		return
@@ -169,7 +169,8 @@ func main() {
 
 	fmt.Println("")
 	var exportLocations []shares.ExportLocation
-	if getExportLocationsReqResponse, err := shares.GetExportLocations(client, shareID).Extract(); err != nil {
+	var chosenLocation shares.ExportLocation
+	if getExportLocationsReqResponse, err := shares.GetExportLocations(client, createdShare.ID).Extract(); err != nil {
 		fmt.Printf("Response to get export locations request says failed: (%v)", err)
 		fmt.Println("")
 		return
@@ -178,13 +179,23 @@ func main() {
 		fmt.Println("")
 		exportLocations = getExportLocationsReqResponse
 	}
-	if chosenLocation, err := sharedfilesystems.ChooseExportLocation(exportLocations); err != nil {
+	if chosenLocation, err = sharedfilesystems.ChooseExportLocation(exportLocations); err != nil {
 		fmt.Println("")
 		fmt.Printf("Failed to choose an export location: %q", err.Error())
 		fmt.Println("")
 	} else {
 		fmt.Println("")
 		fmt.Printf("chosen export location: (%v)", chosenLocation)
+		fmt.Println("")
+	}
+	pv, err := sharedfilesystems.FillInPV(pvc, createdShare, chosenLocation)
+	if err != nil {
+		fmt.Println("")
+		fmt.Printf("Failed to fill in PV: %q", err.Error())
+		fmt.Println("")
+	} else {
+		fmt.Println("")
+		fmt.Printf("Resulting PV: (%v)", pv)
 		fmt.Println("")
 	}
 }
