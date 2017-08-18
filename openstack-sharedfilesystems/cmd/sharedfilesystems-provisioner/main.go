@@ -136,7 +136,7 @@ func main() {
 	fmt.Println("")
 	var exportLocations []shares.ExportLocation
 	var chosenLocation shares.ExportLocation
-	if getExportLocationsReqResponse, err := shares.GetExportLocations(client, createdShare.ID).ExtractExportLocations(); err != nil {
+	if getExportLocationsReqResponse, err := shares.GetExportLocations(client, createdShare.ID).Extract(); err != nil {
 		fmt.Printf("Response to get export locations request says failed: (%v)", err)
 		fmt.Println("")
 		return
