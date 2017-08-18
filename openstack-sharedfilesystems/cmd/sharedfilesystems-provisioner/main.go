@@ -124,7 +124,7 @@ func main() {
 	grantAccessReq.AccessType = "ip"
 	grantAccessReq.AccessTo = "0.0.0.0/0"
 	grantAccessReq.AccessLevel = "rw"
-	if grantAccessReqResponse, err := shares.GrantAccess(client, grantAccessReq, createdShare.ID).ExtractGrantAccess(); err != nil {
+	if grantAccessReqResponse, err := shares.GrantAccess(client, createdShare.ID, grantAccessReq).Extract(); err != nil {
 		fmt.Printf("Response to grant access request says failed: (%v)", err)
 		fmt.Println("")
 		return
