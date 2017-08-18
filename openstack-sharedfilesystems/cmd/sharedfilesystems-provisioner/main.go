@@ -63,6 +63,7 @@ func main() {
 		fmt.Println("")
 		return
 	}
+	client.Microversion = "2.21"
 	fmt.Printf("Service client: (%v)", client)
 	fmt.Println("")
 
