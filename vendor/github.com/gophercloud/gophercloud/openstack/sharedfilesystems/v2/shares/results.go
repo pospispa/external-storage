@@ -96,29 +96,60 @@ func (r commonResult) Extract() (*Share, error) {
 	return s.Share, err
 }
 
-// CreateResult contains the result..
+// CreateResult contains the response body and error from a Create request.
 type CreateResult struct {
 	commonResult
 }
 
-// DeleteResult contains the delete results
+// DeleteResult contains the response body and error from a Delete request.
 type DeleteResult struct {
 	gophercloud.ErrResult
 }
 
-// GetResult contains the get result
+// GetResult contains the response body and error from a Get request.
 type GetResult struct {
 	commonResult
 }
 
-// GrantAccessRes contains all information associated with an OpenStack share Grant Access
-type GrantAccessRes struct {
+// GetExportLocationsResult contains the result body and error from an
+// GetExportLocations request.
+type GetExportLocationsResult struct {
+	gophercloud.Result
+}
+
+// ExportLocation contains all information associated with a share export location
+type ExportLocation struct {
+	// The export location path that should be used for mount operation.
+	Path string `json:"path"`
+	// The UUID of the share instance that this export location belongs to.
+	ShareInstanceID string `json:"share_instance_id"`
+	// Defines purpose of an export location.
+	// If set to true, then it is expected to be used for service needs
+	// and by administrators only.
+	// If it is set to false, then this export location can be used by end users.
+	IsAdminOnly bool `json:"is_admin_only"`
+	// The share export location UUID.
+	ID string `json:"id"`
+	// Drivers may use this field to identify which export locations are
+	// most efficient and should be used preferentially by clients.
+	// By default it is set to false value. New in version 2.14
+	Preferred bool `json:"preferred"`
+}
+
+// Extract will get the Export Locations from the commonResult
+func (r GetExportLocationsResult) Extract() ([]ExportLocation, error) {
+	var s struct {
+		ExportLocations []ExportLocation `json:"export_locations"`
+	}
+	err := r.ExtractInto(&s)
+	return s.ExportLocations, err
+}
+
+// AccessRight contains all information associated with an OpenStack share
+// Grant Access Response
+type AccessRight struct {
 	// The UUID of the share to which you are granted or denied access.
 	ShareID string `json:"share_id"`
-	// Timestamp when the share was created
-	CreatedAt time.Time `json:"created_at, omitempty"`
-	// Timestamp when the share was updated
-	UpdatedAt time.Time `json:"updated_at, omitempty"`
 	// The access rule type that can be "ip", "cert" or "user".
 	AccessType string `json:"access_type,omitempty"`
 	// The value that defines the access that can be a valid format of IP, cert or user.
@@ -133,44 +164,16 @@ type GrantAccessRes struct {
 	ID string `json:"id"`
 }
 
-// ExtractGrantAccess will get the GrantAccess object from the commonResult
-func (r commonResult) ExtractGrantAccess() (*GrantAccessRes, error) {
+// Extract will get the GrantAccess object from the commonResult
+func (r GrantAccessResult) Extract() (*AccessRight, error) {
 	var s struct {
-		GrantAccessRes *GrantAccessRes `json:"access"`
+		AccessRight *AccessRight `json:"access"`
 	}
 	err := r.ExtractInto(&s)
-	return s.GrantAccessRes, err
+	return s.AccessRight, err
 }
 
-// GrantAccessResult contains the result.
+// GrantAccessResult contains the result body and error from an GrantAccess request.
 type GrantAccessResult struct {
-	commonResult
-}
-
-// ExportLocation contains all information associated with a share export location
-type ExportLocation struct {
-	// The export location path that should be used for mount operation.
-	Path string `json:"path"`
-	// The UUID of the share instance that this export location belongs to.
-	ShareInstanceID string `json:"share_instance_id"`
-	// Defines purpose of an export location. If set to true, then it is expected to be used for service needs and by administrators only. If it is set to false, then this export location can be used by end users.
-	IsAdminOnly bool `json:"is_admin_only"`
-	// The share export location UUID.
-	ID string `json:"id"`
-	// Drivers may use this field to identify which export locations are most efficient and should be used preferentially by clients. By default it is set to false value. New in version 2.14
-	Preferred bool `json:"preferred"`
-}
-
-// ExtractMicroversion will get the Specific API Version object from the commonResult
-func (r commonResult) ExtractExportLocations() ([]ExportLocation, error) {
-	var s struct {
-		GetExportLocationsRes []ExportLocation `json:"export_locations"`
-	}
-	err := r.ExtractInto(&s)
-	return s.GetExportLocationsRes, err
-}
-
-// GetExportLocationsResult contains the result.
-type GetExportLocationsResult struct {
-	commonResult
+	gophercloud.Result
 }

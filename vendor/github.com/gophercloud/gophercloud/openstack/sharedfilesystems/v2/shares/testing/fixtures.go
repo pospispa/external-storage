@@ -142,6 +142,28 @@ func MockGetResponse(t *testing.T) {
 	})
 }
 
+var getExportLocationsResponse = `{
+    "export_locations": [
+        {
+		"path": "127.0.0.1:/var/lib/manila/mnt/share-9a922036-ad26-4d27-b955-7a1e285fa74d",
+        	"share_instance_id": "011d21e2-fbc3-4e4a-9993-9ea223f73264",
+		"is_admin_only": false,
+        	"id": "80ed63fc-83bc-4afc-b881-da4a345ac83d",
+		"preferred": false
+	}
+    ]
+}`
+
+// MockGetExportLocationsResponse creates a mock get export locations response
+func MockGetExportLocationsResponse(t *testing.T) {
+	th.Mux.HandleFunc(shareEndpoint+"/"+shareID+"/export_locations", func(w http.ResponseWriter, r *http.Request) {
+		th.TestMethod(t, r, "GET")
+		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, getExportLocationsResponse)
+	})
+}
+
 var grantAccessRequest = `{
 		"allow_access": {
 			"access_type": "ip",
@@ -153,8 +175,6 @@ var grantAccessRequest = `{
 var grantAccessResponse = `{
     "access": {
 	"share_id": "011d21e2-fbc3-4e4a-9993-9ea223f73264",
-	"created_at": "2015-08-27T11:33:21Z",
-	"updated_at": "2015-08-27T11:33:21Z",
 	"access_type": "ip",
 	"access_to": "0.0.0.0/0",
 	"access_key": "",
@@ -175,27 +195,5 @@ func MockGrantAccessResponse(t *testing.T) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, grantAccessResponse)
-	})
-}
-
-var getExportLocationsResponse = `{
-    "export_locations": [
-        {
-		"path": "127.0.0.1:/var/lib/manila/mnt/share-9a922036-ad26-4d27-b955-7a1e285fa74d",
-        	"share_instance_id": "011d21e2-fbc3-4e4a-9993-9ea223f73264",
-		"is_admin_only": false,
-        	"id": "80ed63fc-83bc-4afc-b881-da4a345ac83d",
-		"preferred": false
-	}
-    ]
-}`
-
-// MockGetExportLocationsResponse creates a mock get export locations response
-func MockGetExportLocationsResponse(t *testing.T) {
-	th.Mux.HandleFunc(shareEndpoint+"/"+shareID+"/export_locations", func(w http.ResponseWriter, r *http.Request) {
-		th.TestMethod(t, r, "GET")
-		th.TestHeader(t, r, "X-Auth-Token", fake.TokenID)
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, getExportLocationsResponse)
 	})
 }
