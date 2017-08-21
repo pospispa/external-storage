@@ -1,5 +1,5 @@
-hash: 59dd3c6a76a0608bf20d57f860910f9f157c1cab784a9f18583d40276ab7f8fb
-updated: 2017-08-21T12:34:03.570991732+02:00
+hash: 702e0d851c794d8b3cbe9dde70297f4be67ba2358663dca1000d9d2dd09077da
+updated: 2017-08-21T13:22:00.453347964+02:00
 imports:
 - name: github.com/aws/aws-sdk-go
   version: 3546c9128687af50e4bcedac5b1ffdd593db0c83
@@ -56,6 +56,8 @@ imports:
   - log
 - name: github.com/emicklei/go-restful-swagger12
   version: dcef7f55730566d41eae5db10e7d6981829720f6
+- name: github.com/exponent-io/jsonpath
+  version: d6023ce2651d8eafb5c75bb0c7167536102ec9f5
 - name: github.com/fsnotify/fsnotify
   version: 4da3e2cfbabc9f751898f250b49f2439785783a1
 - name: github.com/ghodss/yaml
@@ -232,11 +234,13 @@ imports:
   - pkg/api/errors
   - pkg/api/meta
   - pkg/api/resource
+  - pkg/api/validation
   - pkg/apimachinery
   - pkg/apimachinery/announced
   - pkg/apimachinery/registered
   - pkg/apis/meta/v1
   - pkg/apis/meta/v1/unstructured
+  - pkg/apis/meta/v1/validation
   - pkg/apis/meta/v1alpha1
   - pkg/conversion
   - pkg/conversion/queryparams
@@ -280,6 +284,14 @@ imports:
   - third_party/forked/golang/json
   - third_party/forked/golang/netutil
   - third_party/forked/golang/reflect
+- name: k8s.io/apiserver
+  version: 149fc2228647cea28b0670c240ec582e985e8eda
+  subpackages:
+  - pkg/authentication/authenticator
+  - pkg/authentication/serviceaccount
+  - pkg/authentication/user
+  - pkg/features
+  - pkg/util/feature
 - name: k8s.io/client-go
   version: 42a124578af9e61f5c6902fa7b6b2cb6538f17d2
   subpackages:
@@ -326,15 +338,20 @@ imports:
   - util/flowcontrol
   - util/homedir
   - util/integer
+  - util/workqueue
 - name: k8s.io/kubernetes
   version: df7f4b3526a580ef122aaeef61ab52842a60a88b
   subpackages:
   - pkg/api
   - pkg/api/helper
   - pkg/api/install
+  - pkg/api/service
+  - pkg/api/util
   - pkg/api/v1
   - pkg/api/v1/helper
+  - pkg/api/v1/pod
   - pkg/api/v1/ref
+  - pkg/api/validation
   - pkg/apis/apps
   - pkg/apis/apps/install
   - pkg/apis/apps/v1beta1
@@ -375,6 +392,7 @@ imports:
   - pkg/apis/storage/install
   - pkg/apis/storage/v1
   - pkg/apis/storage/v1beta1
+  - pkg/capabilities
   - pkg/client/clientset_generated/clientset
   - pkg/client/clientset_generated/clientset/scheme
   - pkg/client/clientset_generated/clientset/typed/admissionregistration/v1alpha1
@@ -397,12 +415,28 @@ imports:
   - pkg/client/clientset_generated/clientset/typed/settings/v1alpha1
   - pkg/client/clientset_generated/clientset/typed/storage/v1
   - pkg/client/clientset_generated/clientset/typed/storage/v1beta1
+  - pkg/client/informers/informers_generated/externalversions/core/v1
+  - pkg/client/informers/informers_generated/externalversions/internalinterfaces
+  - pkg/client/informers/informers_generated/externalversions/storage/v1
+  - pkg/client/listers/core/v1
+  - pkg/client/listers/storage/v1
+  - pkg/client/retry
+  - pkg/cloudprovider
+  - pkg/controller
+  - pkg/controller/volume/events
+  - pkg/controller/volume/persistentvolume
+  - pkg/features
   - pkg/kubelet/apis
+  - pkg/security/apparmor
+  - pkg/serviceaccount
   - pkg/util
   - pkg/util/exec
   - pkg/util/goroutinemap
   - pkg/util/goroutinemap/exponentialbackoff
+  - pkg/util/hash
+  - pkg/util/io
   - pkg/util/mount
+  - pkg/util/net/sets
   - pkg/util/parsers
   - pkg/util/sets
   - pkg/util/version
