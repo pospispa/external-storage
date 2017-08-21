@@ -62,3 +62,7 @@ import:
 - package: github.com/spf13/pflag
   version: 5ccb023bc27df288a957c5e994cd44fd19619465
 - package: github.com/powerman/rpc-codec/jsonrpc2
+- package: golang.org/x/sys
+  version: c23410a886927bab8ca5e80b08af6a56faeb330d
+  subpackages:
+  - unix
