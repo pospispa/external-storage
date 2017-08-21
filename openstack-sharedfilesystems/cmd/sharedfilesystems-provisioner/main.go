@@ -22,6 +22,7 @@ import (
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
+	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/apiversions"
 	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/v2/shares"
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
 	sharedfilesystems "github.com/kubernetes-incubator/external-storage/openstack-sharedfilesystems/pkg"
@@ -64,6 +65,39 @@ func main() {
 		return
 	}
 	client.Microversion = "2.21"
+	serverVer, err := apiversions.Get(client, "v2").Extract()
+	if err != nil {
+		fmt.Printf("apiversions.Get failed: (%v)", err)
+		fmt.Println("")
+		return
+	} else {
+		fmt.Printf("apiversions.Get returned: (%v)", serverVer)
+		fmt.Printf("Server's min microversion: %q, max microversion: %q", serverVer.MinVersion, serverVer.Version)
+		fmt.Println("")
+	}
+	if err = sharedfilesystems.ValidMicroversion(serverVer.MinVersion); err != nil {
+		fmt.Printf("apiversions.Get returned invalid minimum microversion: (%v)", serverVer.MinVersion)
+		fmt.Println("")
+		return
+	}
+	if err = sharedfilesystems.ValidMicroversion(serverVer.Version); err != nil {
+		fmt.Printf("apiversions.Get returned invalid maximum microversion: (%v)", serverVer.Version)
+		fmt.Println("")
+		return
+	}
+	clientMajor, clientMinor := sharedfilesystems.SplitMicroversion(client.Microversion)
+	minMajor, minMinor := sharedfilesystems.SplitMicroversion(serverVer.MinVersion)
+	if clientMajor < minMajor || (clientMajor == minMajor && clientMinor < minMinor) {
+		fmt.Printf("client microversion (%q) is smaller than server's min microversion (%q)", client.Microversion, serverVer.MinVersion)
+		fmt.Println("")
+		return
+	}
+	maxMajor, maxMinor := sharedfilesystems.SplitMicroversion(serverVer.Version)
+	if maxMajor < clientMajor || (maxMajor == clientMajor && maxMinor < clientMinor) {
+		fmt.Printf("client microversion (%q) is bigger than server's max microversion (%q)", client.Microversion, serverVer.Version)
+		fmt.Println("")
+		return
+	}
 	fmt.Printf("Service client: (%v)", client)
 	fmt.Println("")
 
