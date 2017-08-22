@@ -17,9 +17,11 @@ limitations under the License.
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
+	"github.com/golang/glog"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/sharedfilesystems/apiversions"
@@ -39,67 +41,47 @@ func devMockGetAllZones() (sets.String, error) {
 }
 
 func main() {
+	flag.Parse()
+	flag.Set("logtostderr", "true")
+
 	regionName := os.Getenv("OS_REGION_NAME")
 	authOpts, err := openstack.AuthOptionsFromEnv()
 	if err != nil {
-		fmt.Printf("AuthOptionsFromEnv failed: (%v)", err)
-		fmt.Println("")
-		return
+		glog.Fatalf("%v", err)
 	}
-	fmt.Println("")
-	fmt.Printf("AuthOptionsFromEnv: (%v)", authOpts)
-	fmt.Println("")
+	glog.V(1).Infof("successfully read options from environment variables: (%v)", authOpts)
 	provider, err := openstack.AuthenticatedClient(authOpts)
 	if err != nil {
-		fmt.Printf("AuthenticatedClient failed: (%v)", err)
-		fmt.Println("")
-		return
+		glog.Fatalf("authentication failed: (%v)", err)
 	}
-	fmt.Println("")
-	fmt.Printf("Provider client: (%v)", provider)
-	fmt.Println("")
+	glog.V(4).Infof("successfully created provider client: (%v)", provider)
 	client, err := openstack.NewSharedFileSystemV2(provider, gophercloud.EndpointOpts{Region: regionName})
 	if err != nil {
-		fmt.Printf("NewSharedFileSystemV2 failed: (%v)", err)
-		fmt.Println("")
-		return
+		glog.Fatalf("failed to create Manila v2 client: (%v)", err)
 	}
 	client.Microversion = "2.21"
 	serverVer, err := apiversions.Get(client, "v2").Extract()
 	if err != nil {
-		fmt.Printf("apiversions.Get failed: (%v)", err)
-		fmt.Println("")
-		return
-	} else {
-		fmt.Printf("apiversions.Get returned: (%v)", serverVer)
-		fmt.Printf("Server's min microversion: %q, max microversion: %q", serverVer.MinVersion, serverVer.Version)
-		fmt.Println("")
+		glog.Fatalf("failed to get Manila v2 API min/max microversions: (%v)", err)
 	}
+	glog.V(4).Infof("received server's microvesion data structure: (%v)", serverVer)
+	glog.V(3).Infof("server's min microversion is: %q, max microversion is: %q", serverVer.MinVersion, serverVer.Version)
 	if err = sharedfilesystems.ValidMicroversion(serverVer.MinVersion); err != nil {
-		fmt.Printf("apiversions.Get returned invalid minimum microversion: (%v)", serverVer.MinVersion)
-		fmt.Println("")
-		return
+		glog.Fatalf("server's minimum microversion is invalid: (%v)", serverVer.MinVersion)
 	}
 	if err = sharedfilesystems.ValidMicroversion(serverVer.Version); err != nil {
-		fmt.Printf("apiversions.Get returned invalid maximum microversion: (%v)", serverVer.Version)
-		fmt.Println("")
-		return
+		glog.Fatalf("server's maximum microversion is invalid: (%v)", serverVer.Version)
 	}
 	clientMajor, clientMinor := sharedfilesystems.SplitMicroversion(client.Microversion)
 	minMajor, minMinor := sharedfilesystems.SplitMicroversion(serverVer.MinVersion)
 	if clientMajor < minMajor || (clientMajor == minMajor && clientMinor < minMinor) {
-		fmt.Printf("client microversion (%q) is smaller than server's min microversion (%q)", client.Microversion, serverVer.MinVersion)
-		fmt.Println("")
-		return
+		glog.Fatalf("client microversion (%q) is smaller than the server's minimum microversion (%q)", client.Microversion, serverVer.MinVersion)
 	}
 	maxMajor, maxMinor := sharedfilesystems.SplitMicroversion(serverVer.Version)
 	if maxMajor < clientMajor || (maxMajor == clientMajor && maxMinor < clientMinor) {
-		fmt.Printf("client microversion (%q) is bigger than server's max microversion (%q)", client.Microversion, serverVer.Version)
-		fmt.Println("")
-		return
+		glog.Fatalf("client microversion (%q) is bigger than the server's maximum microversion (%q)", client.Microversion, serverVer.Version)
 	}
-	fmt.Printf("Service client: (%v)", client)
-	fmt.Println("")
+	glog.V(4).Infof("successfully created Manila v2 client: (%v)", client)
 
 	pvc := controller.VolumeOptions{
 		PersistentVolumeReclaimPolicy: "Delete",
@@ -112,7 +94,7 @@ func main() {
 			Spec: v1.PersistentVolumeClaimSpec{
 				Resources: v1.ResourceRequirements{
 					Requests: v1.ResourceList{
-						v1.ResourceStorage: resource.Quantity{},
+						v1.ResourceStorage: resource.MustParse("2G"),
 					},
 				},
 			},
@@ -122,80 +104,55 @@ func main() {
 		// Roger's OpenStack
 		// Parameters: map[string]string{sharedfilesystems.ZonesSCParamName: "nova", TypeSCParamName: "default"},
 	}
-	storageSize := "2G"
-	if quantity, err := resource.ParseQuantity(storageSize); err != nil {
-		fmt.Printf("Failed to parse storage size (%v): %v", storageSize, err)
-	} else {
-		pvc.PVC.Spec.Resources.Requests[v1.ResourceStorage] = quantity
-	}
 	var createdShare shares.Share
-	if createReq, err := sharedfilesystems.PrepareCreateRequest(pvc, devMockGetAllZones); err != nil {
-		fmt.Printf("Failed to create Create Request: (%v)", err)
-	} else {
-		fmt.Printf("Request: %v", createReq)
-		fmt.Println("")
-		if createReqResponse, err := shares.Create(client, createReq).Extract(); err != nil {
-			fmt.Printf("Response to create request says failed: (%v)", err)
-			fmt.Println("")
-			return
-		} else {
-			fmt.Printf("Create response: (%v)", createReqResponse)
-			fmt.Println("")
-			createdShare = *createReqResponse
-		}
-	}
-	fmt.Println("")
-	if err = sharedfilesystems.WaitTillAvailable(client, createdShare.ID); err != nil {
-		fmt.Printf("Response to WaitTillAvailable says failed: (%v)", err)
-		fmt.Println("")
+	var createReq shares.CreateOpts
+	if createReq, err = sharedfilesystems.PrepareCreateRequest(pvc, devMockGetAllZones); err != nil {
+		glog.Errorf("failed to create Create Request: (%v)", err)
 		return
-	} else {
-		fmt.Printf("WaitTillAvailable returned no error")
-		fmt.Println("")
 	}
+	glog.V(4).Infof("successfully created a share Create Request: %v", createReq)
+	var createReqResponse *shares.Share
+	if createReqResponse, err = shares.Create(client, createReq).Extract(); err != nil {
+		glog.Errorf("failed to create a share: (%v)", err)
+		return
+	}
+	glog.V(3).Infof("successfully created a share: (%v)", createReqResponse)
+	createdShare = *createReqResponse
+	if err = sharedfilesystems.WaitTillAvailable(client, createdShare.ID); err != nil {
+		glog.Errorf("waiting for the share %q to become created failed: (%v)", createdShare.ID, err)
+		return
+	}
+	glog.V(4).Infof("the share %q is now in state created", createdShare.ID)
 
 	var grantAccessReq shares.GrantAccessOpts
 	grantAccessReq.AccessType = "ip"
 	grantAccessReq.AccessTo = "0.0.0.0/0"
 	grantAccessReq.AccessLevel = "rw"
-	if grantAccessReqResponse, err := shares.GrantAccess(client, createdShare.ID, grantAccessReq).Extract(); err != nil {
-		fmt.Printf("Response to grant access request says failed: (%v)", err)
-		fmt.Println("")
+	var grantAccessReqResponse *shares.AccessRight
+	if grantAccessReqResponse, err = shares.GrantAccess(client, createdShare.ID, grantAccessReq).Extract(); err != nil {
+		glog.Errorf("failed to grant access to the share %q: (%v)", createdShare.ID, err)
 		return
-	} else {
-		fmt.Printf("Grant Access response: (%v)", grantAccessReqResponse)
-		fmt.Println("")
 	}
+	glog.V(4).Infof("granted access to the share %q: (%v)", createdShare.ID, grantAccessReqResponse)
 
-	fmt.Println("")
 	var exportLocations []shares.ExportLocation
 	var chosenLocation shares.ExportLocation
-	if getExportLocationsReqResponse, err := shares.GetExportLocations(client, createdShare.ID).Extract(); err != nil {
-		fmt.Printf("Response to get export locations request says failed: (%v)", err)
-		fmt.Println("")
+	var getExportLocationsReqResponse []shares.ExportLocation
+	if getExportLocationsReqResponse, err = shares.GetExportLocations(client, createdShare.ID).Extract(); err != nil {
+		glog.Errorf("failed to get export locations for the share %q: (%v)", createdShare.ID, err)
 		return
-	} else {
-		fmt.Printf("Get Export Locations response: (%v)", getExportLocationsReqResponse)
-		fmt.Println("")
-		exportLocations = getExportLocationsReqResponse
 	}
+	glog.V(4).Infof("got export locations for the share %q: (%v)", createdShare.ID, getExportLocationsReqResponse)
+	exportLocations = getExportLocationsReqResponse
 	if chosenLocation, err = sharedfilesystems.ChooseExportLocation(exportLocations); err != nil {
-		fmt.Println("")
-		fmt.Printf("Failed to choose an export location: %q", err.Error())
-		fmt.Println("")
-	} else {
-		fmt.Println("")
-		fmt.Printf("chosen export location: (%v)", chosenLocation)
-		fmt.Println("")
+		fmt.Printf("failed to choose an export location for the share %q: %q", createdShare.ID, err.Error())
+		return
 	}
+	glog.V(4).Infof("selected export location for the share %q is: (%v)", createdShare.ID, chosenLocation)
 	pv, err := sharedfilesystems.FillInPV(pvc, createdShare, chosenLocation)
 	if err != nil {
-		fmt.Println("")
-		fmt.Printf("Failed to fill in PV: %q", err.Error())
-		fmt.Println("")
-	} else {
-		fmt.Println("")
-		fmt.Printf("Resulting PV: (%v)", pv)
-		fmt.Println("")
+		glog.Errorf("failed to fill in PV for the share %q: %q", createdShare.ID, err.Error())
+		return
 	}
+	glog.V(4).Infof("resulting PV for the share %q: (%v)", createdShare.ID, pv)
 }
