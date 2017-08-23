@@ -120,6 +120,7 @@ func main() {
 	createdShare = *createReqResponse
 	if err = sharedfilesystems.WaitTillAvailable(client, createdShare.ID); err != nil {
 		glog.Errorf("waiting for the share %q to become created failed: (%v)", createdShare.ID, err)
+		deleteShare(client, createdShare.ID)
 		return
 	}
 	glog.V(4).Infof("the share %q is now in state created", createdShare.ID)
@@ -131,6 +132,7 @@ func main() {
 	var grantAccessReqResponse *shares.AccessRight
 	if grantAccessReqResponse, err = shares.GrantAccess(client, createdShare.ID, grantAccessReq).Extract(); err != nil {
 		glog.Errorf("failed to grant access to the share %q: (%v)", createdShare.ID, err)
+		deleteShare(client, createdShare.ID)
 		return
 	}
 	glog.V(4).Infof("granted access to the share %q: (%v)", createdShare.ID, grantAccessReqResponse)
@@ -140,19 +142,34 @@ func main() {
 	var getExportLocationsReqResponse []shares.ExportLocation
 	if getExportLocationsReqResponse, err = shares.GetExportLocations(client, createdShare.ID).Extract(); err != nil {
 		glog.Errorf("failed to get export locations for the share %q: (%v)", createdShare.ID, err)
+		deleteShare(client, createdShare.ID)
 		return
 	}
 	glog.V(4).Infof("got export locations for the share %q: (%v)", createdShare.ID, getExportLocationsReqResponse)
 	exportLocations = getExportLocationsReqResponse
 	if chosenLocation, err = sharedfilesystems.ChooseExportLocation(exportLocations); err != nil {
 		fmt.Printf("failed to choose an export location for the share %q: %q", createdShare.ID, err.Error())
+		deleteShare(client, createdShare.ID)
 		return
 	}
 	glog.V(4).Infof("selected export location for the share %q is: (%v)", createdShare.ID, chosenLocation)
 	pv, err := sharedfilesystems.FillInPV(pvc, createdShare, chosenLocation)
 	if err != nil {
 		glog.Errorf("failed to fill in PV for the share %q: %q", createdShare.ID, err.Error())
+		deleteShare(client, createdShare.ID)
 		return
 	}
 	glog.V(4).Infof("resulting PV for the share %q: (%v)", createdShare.ID, pv)
 }
+
+func deleteShare(client *gophercloud.ServiceClient, shareID string) error {
+	deleteResult := shares.Delete(client, shareID)
+	glog.V(4).Infof("share %q delete result: (%v)", shareID, deleteResult)
+	if deleteResult.Err != nil {
+		errMsg := fmt.Sprintf("failed to delete share %q", shareID)
+		glog.Errorf("%q", errMsg)
+		return fmt.Errorf("%q", errMsg)
+	}
+	return nil
+}
+
