@@ -884,3 +884,117 @@ func TestGetServerAndPath(t *testing.T) {
 		t.Errorf("%v(%q) = (%q, %q, %q) WANT (\"\", \"\", \"an error\")", functionUnderTest, exportLocationPath, gotServer, gotPath, err)
 	}
 }
+
+func TestGetShareIDfromPV(t *testing.T) {
+	functionUnderTest := "GetShareIDfromPV"
+	// want success
+	succCases := []struct {
+		volume *v1.PersistentVolume
+		want   string
+	}{
+		{
+			volume: &v1.PersistentVolume{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: fakePVName,
+					Annotations: map[string]string{
+						ManilaAnnotationShareIDName: fakeShareID,
+					},
+				},
+				Spec: v1.PersistentVolumeSpec{
+					PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+					AccessModes: []v1.PersistentVolumeAccessMode{
+						v1.ReadWriteOnce,
+						v1.ReadOnlyMany,
+						v1.ReadWriteMany,
+					},
+					Capacity: v1.ResourceList{
+						v1.ResourceStorage: resource.MustParse("3G"),
+					},
+					PersistentVolumeSource: v1.PersistentVolumeSource{
+						NFS: &v1.NFSVolumeSource{
+							Server:   "127.0.0.1",
+							Path:     "/var/lib/manila/mnt/share-0ee809f3-edd3-4603-973a-8049311f8d00",
+							ReadOnly: false,
+						},
+					},
+				},
+			},
+			want: fakeShareID,
+		},
+	}
+	for _, succCase := range succCases {
+		if got, err := GetShareIDfromPV(succCase.volume); err != nil {
+			t.Errorf("%v(%v) = (%q, %q) WANT (%q, nil)", functionUnderTest, succCase.volume, got, err.Error(), succCase.want)
+		} else if got != succCase.want {
+			t.Errorf("%v(%v) = (%q, nil) WANT (%q, nil)", functionUnderTest, succCase.volume, got, succCase.want)
+		}
+	}
+
+	// want an error
+	errCases := []struct {
+		testCaseName string
+		volume       *v1.PersistentVolume
+	}{
+		{
+			testCaseName: "Empty Annotations field",
+			volume: &v1.PersistentVolume{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: fakePVName,
+				},
+				Spec: v1.PersistentVolumeSpec{
+					PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+					AccessModes: []v1.PersistentVolumeAccessMode{
+						v1.ReadWriteOnce,
+						v1.ReadOnlyMany,
+						v1.ReadWriteMany,
+					},
+					Capacity: v1.ResourceList{
+						v1.ResourceStorage: resource.MustParse("3G"),
+					},
+					PersistentVolumeSource: v1.PersistentVolumeSource{
+						NFS: &v1.NFSVolumeSource{
+							Server:   "127.0.0.1",
+							Path:     "/var/lib/manila/mnt/share-0ee809f3-edd3-4603-973a-8049311f8d00",
+							ReadOnly: false,
+						},
+					},
+				},
+			},
+		},
+		{
+			testCaseName: ManilaAnnotationShareIDName + " key doesn't exist in Annotations",
+			volume: &v1.PersistentVolume{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: fakePVName,
+					Annotations: map[string]string{
+						"foo": "bar",
+					},
+				},
+				Spec: v1.PersistentVolumeSpec{
+					PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+					AccessModes: []v1.PersistentVolumeAccessMode{
+						v1.ReadWriteOnce,
+						v1.ReadOnlyMany,
+						v1.ReadWriteMany,
+					},
+					Capacity: v1.ResourceList{
+						v1.ResourceStorage: resource.MustParse("3G"),
+					},
+					PersistentVolumeSource: v1.PersistentVolumeSource{
+						NFS: &v1.NFSVolumeSource{
+							Server:   "127.0.0.1",
+							Path:     "/var/lib/manila/mnt/share-0ee809f3-edd3-4603-973a-8049311f8d00",
+							ReadOnly: false,
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, errCase := range errCases {
+		if got, err := GetShareIDfromPV(errCase.volume); err == nil {
+			t.Errorf("%q: %v(%v) = (%q, nil) WANT (\"any result\", \"an error\")", errCase.testCaseName, functionUnderTest, errCase.volume, got)
+		}
+	}
+
+}
