@@ -210,6 +210,15 @@ func FillInPV(options controller.VolumeOptions, share shares.Share, exportLocati
 	return pv, nil
 }
 
+// GetShareIDfromPV returns:
+// - an error in case there is no shareID stored in volume.ObjectMeta.Annotations[ManilaAnnotationShareIDName]
+func GetShareIDfromPV(volume *v1.PersistentVolume) (string, error) {
+	if shareID, exists := volume.ObjectMeta.Annotations[ManilaAnnotationShareIDName]; exists {
+		return shareID, nil
+	}
+	return "", fmt.Errorf("did not find share ID in annotatins in PV (%v)", volume)
+}
+
 // FIXME: for IPv6
 func getServerAndPath(exportLocationPath string) (string, string, error) {
 	split := strings.SplitN(exportLocationPath, ":", 2)
