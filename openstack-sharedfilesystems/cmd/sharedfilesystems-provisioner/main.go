@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/gophercloud/gophercloud"
@@ -40,48 +41,22 @@ func devMockGetAllZones() (sets.String, error) {
 	return ret, nil
 }
 
+// Delete deletes the share the volume is associated with
+func Delete(volume *v1.PersistentVolume) error {
+	client := createManilaV2Client()
+	shareID, err := sharedfilesystems.GetShareIDfromPV(volume)
+	if err != nil {
+		glog.Errorf("%q", err.Error())
+		return err
+	}
+	return deleteShare(client, shareID)
+}
+
 func main() {
 	flag.Parse()
 	flag.Set("logtostderr", "true")
 
-	regionName := os.Getenv("OS_REGION_NAME")
-	authOpts, err := openstack.AuthOptionsFromEnv()
-	if err != nil {
-		glog.Fatalf("%v", err)
-	}
-	glog.V(1).Infof("successfully read options from environment variables: (%v)", authOpts)
-	provider, err := openstack.AuthenticatedClient(authOpts)
-	if err != nil {
-		glog.Fatalf("authentication failed: (%v)", err)
-	}
-	glog.V(4).Infof("successfully created provider client: (%v)", provider)
-	client, err := openstack.NewSharedFileSystemV2(provider, gophercloud.EndpointOpts{Region: regionName})
-	if err != nil {
-		glog.Fatalf("failed to create Manila v2 client: (%v)", err)
-	}
-	client.Microversion = "2.21"
-	serverVer, err := apiversions.Get(client, "v2").Extract()
-	if err != nil {
-		glog.Fatalf("failed to get Manila v2 API min/max microversions: (%v)", err)
-	}
-	glog.V(4).Infof("received server's microvesion data structure: (%v)", serverVer)
-	glog.V(3).Infof("server's min microversion is: %q, max microversion is: %q", serverVer.MinVersion, serverVer.Version)
-	if err = sharedfilesystems.ValidMicroversion(serverVer.MinVersion); err != nil {
-		glog.Fatalf("server's minimum microversion is invalid: (%v)", serverVer.MinVersion)
-	}
-	if err = sharedfilesystems.ValidMicroversion(serverVer.Version); err != nil {
-		glog.Fatalf("server's maximum microversion is invalid: (%v)", serverVer.Version)
-	}
-	clientMajor, clientMinor := sharedfilesystems.SplitMicroversion(client.Microversion)
-	minMajor, minMinor := sharedfilesystems.SplitMicroversion(serverVer.MinVersion)
-	if clientMajor < minMajor || (clientMajor == minMajor && clientMinor < minMinor) {
-		glog.Fatalf("client microversion (%q) is smaller than the server's minimum microversion (%q)", client.Microversion, serverVer.MinVersion)
-	}
-	maxMajor, maxMinor := sharedfilesystems.SplitMicroversion(serverVer.Version)
-	if maxMajor < clientMajor || (maxMajor == clientMajor && maxMinor < clientMinor) {
-		glog.Fatalf("client microversion (%q) is bigger than the server's maximum microversion (%q)", client.Microversion, serverVer.Version)
-	}
-	glog.V(4).Infof("successfully created Manila v2 client: (%v)", client)
+	client := createManilaV2Client()
 
 	pvc := controller.VolumeOptions{
 		PersistentVolumeReclaimPolicy: "Delete",
@@ -101,6 +76,8 @@ func main() {
 		},
 		Parameters: map[string]string{sharedfilesystems.ZonesSCParamName: "nova"},
 	}
+
+	var err error
 	var createdShare shares.Share
 	var createReq shares.CreateOpts
 	if createReq, err = sharedfilesystems.PrepareCreateRequest(pvc, devMockGetAllZones); err != nil {
@@ -157,6 +134,13 @@ func main() {
 		return
 	}
 	glog.V(4).Infof("resulting PV for the share %q: (%v)", createdShare.ID, pv)
+
+	fmt.Println("")
+	fmt.Println("Waiting for 30 seconds. The created share will be deleted afterwards.")
+	fmt.Println("")
+	time.Sleep(30000 * time.Millisecond)
+
+	Delete(pv)
 }
 
 func deleteShare(client *gophercloud.ServiceClient, shareID string) error {
@@ -170,3 +154,44 @@ func deleteShare(client *gophercloud.ServiceClient, shareID string) error {
 	return nil
 }
 
+func createManilaV2Client() *gophercloud.ServiceClient {
+	regionName := os.Getenv("OS_REGION_NAME")
+	authOpts, err := openstack.AuthOptionsFromEnv()
+	if err != nil {
+		glog.Fatalf("%v", err)
+	}
+	glog.V(1).Infof("successfully read options from environment variables: (%v)", authOpts)
+	provider, err := openstack.AuthenticatedClient(authOpts)
+	if err != nil {
+		glog.Fatalf("authentication failed: (%v)", err)
+	}
+	glog.V(4).Infof("successfully created provider client: (%v)", provider)
+	client, err := openstack.NewSharedFileSystemV2(provider, gophercloud.EndpointOpts{Region: regionName})
+	if err != nil {
+		glog.Fatalf("failed to create Manila v2 client: (%v)", err)
+	}
+	client.Microversion = "2.21"
+	serverVer, err := apiversions.Get(client, "v2").Extract()
+	if err != nil {
+		glog.Fatalf("failed to get Manila v2 API min/max microversions: (%v)", err)
+	}
+	glog.V(4).Infof("received server's microvesion data structure: (%v)", serverVer)
+	glog.V(3).Infof("server's min microversion is: %q, max microversion is: %q", serverVer.MinVersion, serverVer.Version)
+	if err = sharedfilesystems.ValidMicroversion(serverVer.MinVersion); err != nil {
+		glog.Fatalf("server's minimum microversion is invalid: (%v)", serverVer.MinVersion)
+	}
+	if err = sharedfilesystems.ValidMicroversion(serverVer.Version); err != nil {
+		glog.Fatalf("server's maximum microversion is invalid: (%v)", serverVer.Version)
+	}
+	clientMajor, clientMinor := sharedfilesystems.SplitMicroversion(client.Microversion)
+	minMajor, minMinor := sharedfilesystems.SplitMicroversion(serverVer.MinVersion)
+	if clientMajor < minMajor || (clientMajor == minMajor && clientMinor < minMinor) {
+		glog.Fatalf("client microversion (%q) is smaller than the server's minimum microversion (%q)", client.Microversion, serverVer.MinVersion)
+	}
+	maxMajor, maxMinor := sharedfilesystems.SplitMicroversion(serverVer.Version)
+	if maxMajor < clientMajor || (maxMajor == clientMajor && maxMinor < clientMinor) {
+		glog.Fatalf("client microversion (%q) is bigger than the server's maximum microversion (%q)", client.Microversion, serverVer.Version)
+	}
+	glog.V(4).Infof("successfully created Manila v2 client: (%v)", client)
+	return client
+}
