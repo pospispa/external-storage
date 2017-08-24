@@ -41,6 +41,69 @@ func devMockGetAllZones() (sets.String, error) {
 	return ret, nil
 }
 
+// Provision creates a new Manila share assigns access rights to the share and creates a corresponding PV
+func Provision(pvc controller.VolumeOptions) (*v1.PersistentVolume, error) {
+	client := createManilaV2Client()
+	var err error
+	var createdShare shares.Share
+	var createReq shares.CreateOpts
+	if createReq, err = sharedfilesystems.PrepareCreateRequest(pvc, devMockGetAllZones); err != nil {
+		glog.Errorf("failed to create Create Request: (%v)", err)
+		return nil, err
+	}
+	glog.V(4).Infof("successfully created a share Create Request: %v", createReq)
+	var createReqResponse *shares.Share
+	if createReqResponse, err = shares.Create(client, createReq).Extract(); err != nil {
+		glog.Errorf("failed to create a share: (%v)", err)
+		return nil, err
+	}
+	glog.V(3).Infof("successfully created a share: (%v)", createReqResponse)
+	createdShare = *createReqResponse
+	if err = sharedfilesystems.WaitTillAvailable(client, createdShare.ID); err != nil {
+		glog.Errorf("waiting for the share %q to become created failed: (%v)", createdShare.ID, err)
+		deleteShare(client, createdShare.ID)
+		return nil, err
+	}
+	glog.V(4).Infof("the share %q is now in state created", createdShare.ID)
+
+	var grantAccessReq shares.GrantAccessOpts
+	grantAccessReq.AccessType = "ip"
+	grantAccessReq.AccessTo = "0.0.0.0/0"
+	grantAccessReq.AccessLevel = "rw"
+	var grantAccessReqResponse *shares.AccessRight
+	if grantAccessReqResponse, err = shares.GrantAccess(client, createdShare.ID, grantAccessReq).Extract(); err != nil {
+		glog.Errorf("failed to grant access to the share %q: (%v)", createdShare.ID, err)
+		deleteShare(client, createdShare.ID)
+		return nil, err
+	}
+	glog.V(4).Infof("granted access to the share %q: (%v)", createdShare.ID, grantAccessReqResponse)
+
+	var exportLocations []shares.ExportLocation
+	var chosenLocation shares.ExportLocation
+	var getExportLocationsReqResponse []shares.ExportLocation
+	if getExportLocationsReqResponse, err = shares.GetExportLocations(client, createdShare.ID).Extract(); err != nil {
+		glog.Errorf("failed to get export locations for the share %q: (%v)", createdShare.ID, err)
+		deleteShare(client, createdShare.ID)
+		return nil, err
+	}
+	glog.V(4).Infof("got export locations for the share %q: (%v)", createdShare.ID, getExportLocationsReqResponse)
+	exportLocations = getExportLocationsReqResponse
+	if chosenLocation, err = sharedfilesystems.ChooseExportLocation(exportLocations); err != nil {
+		fmt.Printf("failed to choose an export location for the share %q: %q", createdShare.ID, err.Error())
+		deleteShare(client, createdShare.ID)
+		return nil, err
+	}
+	glog.V(4).Infof("selected export location for the share %q is: (%v)", createdShare.ID, chosenLocation)
+	pv, err := sharedfilesystems.FillInPV(pvc, createdShare, chosenLocation)
+	if err != nil {
+		glog.Errorf("failed to fill in PV for the share %q: %q", createdShare.ID, err.Error())
+		deleteShare(client, createdShare.ID)
+		return nil, err
+	}
+	glog.V(4).Infof("resulting PV for the share %q: (%v)", createdShare.ID, pv)
+	return pv, nil
+}
+
 // Delete deletes the share the volume is associated with
 func Delete(volume *v1.PersistentVolume) error {
 	client := createManilaV2Client()
@@ -55,8 +118,6 @@ func Delete(volume *v1.PersistentVolume) error {
 func main() {
 	flag.Parse()
 	flag.Set("logtostderr", "true")
-
-	client := createManilaV2Client()
 
 	pvc := controller.VolumeOptions{
 		PersistentVolumeReclaimPolicy: "Delete",
@@ -80,63 +141,10 @@ func main() {
 		// Parameters: map[string]string{sharedfilesystems.ZonesSCParamName: "nova", TypeSCParamName: "default"},
 	}
 
-	var err error
-	var createdShare shares.Share
-	var createReq shares.CreateOpts
-	if createReq, err = sharedfilesystems.PrepareCreateRequest(pvc, devMockGetAllZones); err != nil {
-		glog.Errorf("failed to create Create Request: (%v)", err)
-		return
-	}
-	glog.V(4).Infof("successfully created a share Create Request: %v", createReq)
-	var createReqResponse *shares.Share
-	if createReqResponse, err = shares.Create(client, createReq).Extract(); err != nil {
-		glog.Errorf("failed to create a share: (%v)", err)
-		return
-	}
-	glog.V(3).Infof("successfully created a share: (%v)", createReqResponse)
-	createdShare = *createReqResponse
-	if err = sharedfilesystems.WaitTillAvailable(client, createdShare.ID); err != nil {
-		glog.Errorf("waiting for the share %q to become created failed: (%v)", createdShare.ID, err)
-		deleteShare(client, createdShare.ID)
-		return
-	}
-	glog.V(4).Infof("the share %q is now in state created", createdShare.ID)
-
-	var grantAccessReq shares.GrantAccessOpts
-	grantAccessReq.AccessType = "ip"
-	grantAccessReq.AccessTo = "0.0.0.0/0"
-	grantAccessReq.AccessLevel = "rw"
-	var grantAccessReqResponse *shares.AccessRight
-	if grantAccessReqResponse, err = shares.GrantAccess(client, createdShare.ID, grantAccessReq).Extract(); err != nil {
-		glog.Errorf("failed to grant access to the share %q: (%v)", createdShare.ID, err)
-		deleteShare(client, createdShare.ID)
-		return
-	}
-	glog.V(4).Infof("granted access to the share %q: (%v)", createdShare.ID, grantAccessReqResponse)
-
-	var exportLocations []shares.ExportLocation
-	var chosenLocation shares.ExportLocation
-	var getExportLocationsReqResponse []shares.ExportLocation
-	if getExportLocationsReqResponse, err = shares.GetExportLocations(client, createdShare.ID).Extract(); err != nil {
-		glog.Errorf("failed to get export locations for the share %q: (%v)", createdShare.ID, err)
-		deleteShare(client, createdShare.ID)
-		return
-	}
-	glog.V(4).Infof("got export locations for the share %q: (%v)", createdShare.ID, getExportLocationsReqResponse)
-	exportLocations = getExportLocationsReqResponse
-	if chosenLocation, err = sharedfilesystems.ChooseExportLocation(exportLocations); err != nil {
-		fmt.Printf("failed to choose an export location for the share %q: %q", createdShare.ID, err.Error())
-		deleteShare(client, createdShare.ID)
-		return
-	}
-	glog.V(4).Infof("selected export location for the share %q is: (%v)", createdShare.ID, chosenLocation)
-	pv, err := sharedfilesystems.FillInPV(pvc, createdShare, chosenLocation)
+	pv, err := Provision(pvc)
 	if err != nil {
-		glog.Errorf("failed to fill in PV for the share %q: %q", createdShare.ID, err.Error())
-		deleteShare(client, createdShare.ID)
 		return
 	}
-	glog.V(4).Infof("resulting PV for the share %q: (%v)", createdShare.ID, pv)
 
 	fmt.Println("")
 	fmt.Println("Waiting for 30 seconds. The created share will be deleted afterwards.")
