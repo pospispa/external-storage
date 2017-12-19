@@ -10,24 +10,36 @@ import:
   version: v1.13.1
   subpackages:
   - pkg/mount
+- package: github.com/docker/distribution
+  version: edc3ab29cdff8694dd6feb85cfeb4b5f1b38ed9c
+  subpackages:
+  - digestset
+  - reference
+- package: github.com/gogo/protobuf
+  version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
+  subpackages:
+  - proto
+  - sortkeys
 - package: github.com/golang/glog
 - package: github.com/guelfey/go.dbus
+- package: github.com/juju/ratelimit
+  version: 5b9ff866471762aa2ab2dced63c9fb6f53921342
 - package: github.com/mitchellh/mapstructure
   version: db1efb5
 - package: gopkg.in/gcfg.v1
   version: v1.2.1
 - package: k8s.io/apiserver
-  version: kubernetes-1.8.2
+  version: 9707c008294d447053c0e2737c256ee23f99e5b4
 - package: k8s.io/apiextensions-apiserver
-  version: kubernetes-1.8.2
+  version: e509bb64fe1116e12a32273a2032426aa1a5fd26
 - package: k8s.io/apimachinery
-  version: kubernetes-1.8.2
+  version: 019ae5ada31de202164b118aee88ee2d14075c31
 - package: k8s.io/client-go
-  version: kubernetes-1.8.2
+  version: 35ccd4336052e7d73018b1382413534936f34eee
 - package: k8s.io/api
-  version: kubernetes-1.8.2
+  version: 4df58c811fe2e65feb879227b2b245e4dc26e7ad
 - package: k8s.io/kubernetes
-  version: v1.8.2
+  version: bdaeafa71f6c7c04636251031f93464384d54963
 - package: github.com/heketi/heketi
   version: 300752517908f3456e90d1ee2a773e7dd8ce1afe
   subpackages:
@@ -56,3 +68,16 @@ import:
 - package: github.com/onsi/gomega
 - package: github.com/digitalocean/godo
   version: ^1.1.1
+- package: github.com/pmezard/go-difflib
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  subpackages:
+  - difflib
+- package: github.com/stretchr/objx
+  version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
+- package: github.com/stretchr/testify
+  version: f6abca593680b2315d2075e0f5e2a9751e3f431a
+  subpackages:
+  - assert
+  - mock
+- package: github.com/go-openapi/spec
+  version: 6aced65f8501fe1217321abf0749d354824ba2ff
