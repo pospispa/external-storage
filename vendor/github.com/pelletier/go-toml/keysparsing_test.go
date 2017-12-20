@@ -7,6 +7,7 @@ import (
 
 func testResult(t *testing.T, key string, expected []string) {
 	parsed, err := parseKey(key)
+	t.Logf("key=%s expected=%s parsed=%s", key, expected, parsed)
 	if err != nil {
 		t.Fatal("Unexpected error:", err)
 	}
@@ -21,7 +22,10 @@ func testResult(t *testing.T, key string, expected []string) {
 }
 
 func testError(t *testing.T, key string, expectedError string) {
-	_, err := parseKey(key)
+	res, err := parseKey(key)
+	if err == nil {
+		t.Fatalf("Expected error, but succesfully parsed key %s", res)
+	}
 	if fmt.Sprintf("%s", err) != expectedError {
 		t.Fatalf("Expected error \"%s\", but got \"%s\".", expectedError, err)
 	}
@@ -43,7 +47,24 @@ func TestBaseKeyPound(t *testing.T) {
 	testError(t, "hello#world", "invalid bare character: #")
 }
 
+func TestQuotedKeys(t *testing.T) {
+	testResult(t, `hello."foo".bar`, []string{"hello", "foo", "bar"})
+	testResult(t, `"hello!"`, []string{"hello!"})
+	testResult(t, `"hello\tworld"`, []string{"hello\tworld"})
+	testResult(t, `"\U0001F914"`, []string{"\U0001F914"})
+	testResult(t, `"\u2764"`, []string{"\u2764"})
+
+	testResult(t, `hello.'foo'.bar`, []string{"hello", "foo", "bar"})
+	testResult(t, `'hello!'`, []string{"hello!"})
+	testResult(t, `'hello\tworld'`, []string{`hello\tworld`})
+
+	testError(t, `"\w"`, `invalid escape sequence \w`)
+	testError(t, `"\`, `unfinished escape sequence`)
+	testError(t, `"\t`, `mismatched quotes`)
+}
+
 func TestEmptyKey(t *testing.T) {
 	testError(t, "", "empty key")
 	testError(t, " ", "empty key")
+	testResult(t, `""`, []string{""})
 }
