@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-all: aws/efs ceph/cephfs ceph/rbd flex gluster/block gluster/glusterfs iscsi/targetd local-volume/provisioner local-volume/bootstrapper nfs-client nfs snapshot openstack/standalone-cinder
+all: aws/efs ceph/cephfs ceph/rbd flex gluster/block gluster/glusterfs iscsi/targetd local-volume/provisioner local-volume/bootstrapper nfs-client nfs snapshot openstack/standalone-cinder openstack-sharedfilesystems
 .PHONY: all
 
-clean: clean-aws/efs clean-ceph/cephfs clean-ceph/rbd clean-flex clean-gluster/block clean-gluster/glusterfs clean-iscsi/targetd clean-local-volume/provisioner clean-local-volume/bootstrapper clean-nfs-client clean-nfs clean-openebs clean-snapshot clean-openstack/standalone-cinder
+clean: clean-aws/efs clean-ceph/cephfs clean-ceph/rbd clean-flex clean-gluster/block clean-gluster/glusterfs clean-iscsi/targetd clean-local-volume/provisioner clean-local-volume/bootstrapper clean-nfs-client clean-nfs clean-openebs clean-snapshot clean-openstack/standalone-cinder clean-openstack-sharedfilesystems
 .PHONY: clean
 
 
-test: test-aws/efs test-local-volume/provisioner test-nfs test-snapshot test-openstack/standalone-cinder
+test: test-aws/efs test-local-volume/provisioner test-nfs test-snapshot test-openstack/standalone-cinder test-openstack-sharedfilesystems
 .PHONY: test
 
 verify:
@@ -192,6 +192,22 @@ test-snapshot:
 	make test
 .PHONY: test-snapshot
 
+openstack-sharedfilesystems:
+	cd openstack-sharedfilesystems; \
+	make container
+.PHONY: openstack-sharedfilesystems
+
+test-openstack-sharedfilesystems:
+	cd openstack-sharedfilesystems; \
+	make test
+.PHONY: test-openstack-sharedfilesystems
+
+clean-openstack-sharedfilesystems:
+	cd openstack-sharedfilesystems; \
+	make clean
+.PHONY: clean-openstack-sharedfilesystems
+
+
 push-cephfs-provisioner:
 	cd ceph/cephfs; \
 	make push
@@ -246,6 +262,11 @@ push-openebs-provisioner:
 	cd openebs; \
 	make push
 .PHONY: push-openebs-provisioner
+
+push-openstack-sharedfilesystems:
+	cd openstack-sharedfilesystems; \
+	make push
+.PHONY: push-openstack-sharedfilesystems
 
 deploy-openebs-provisioner:
 	cd openebs; \
