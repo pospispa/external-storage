@@ -36,22 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-func devMockGetAllZones() (sets.String, error) {
-	ret := sets.String{"nova": sets.Empty{}}
-	return ret, nil
-}
-
-// Delete deletes the share the volume is associated with
-func Delete(volume *v1.PersistentVolume) error {
-	client := createManilaV2Client()
-	shareID, err := sharedfilesystems.GetShareIDfromPV(volume)
-	if err != nil {
-		glog.Errorf("%q", err.Error())
-		return err
-	}
-	return deleteShare(client, shareID)
-}
-
 func main() {
 	flag.Parse()
 	flag.Set("logtostderr", "true")
@@ -143,6 +127,17 @@ func main() {
 	Delete(pv)
 }
 
+// Delete deletes the share the volume is associated with
+func Delete(volume *v1.PersistentVolume) error {
+	client := createManilaV2Client()
+	shareID, err := sharedfilesystems.GetShareIDfromPV(volume)
+	if err != nil {
+		glog.Errorf("%q", err.Error())
+		return err
+	}
+	return deleteShare(client, shareID)
+}
+
 func deleteShare(client *gophercloud.ServiceClient, shareID string) error {
 	deleteResult := shares.Delete(client, shareID)
 	glog.V(4).Infof("share %q delete result: (%v)", shareID, deleteResult)
@@ -194,4 +189,9 @@ func createManilaV2Client() *gophercloud.ServiceClient {
 	}
 	glog.V(4).Infof("successfully created Manila v2 client: (%v)", client)
 	return client
+}
+
+func devMockGetAllZones() (sets.String, error) {
+	ret := sets.String{"nova": sets.Empty{}}
+	return ret, nil
 }
