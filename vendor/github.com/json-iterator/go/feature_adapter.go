@@ -71,6 +71,9 @@ type Decoder struct {
 
 // Decode decode JSON into interface{}
 func (adapter *Decoder) Decode(obj interface{}) error {
+	if adapter.iter.Error == io.EOF {
+		return io.EOF
+	}
 	adapter.iter.ReadVal(obj)
 	err := adapter.iter.Error
 	if err == io.EOF {
@@ -110,6 +113,7 @@ type Encoder struct {
 // Encode encode interface{} as JSON to io.Writer
 func (adapter *Encoder) Encode(val interface{}) error {
 	adapter.stream.WriteVal(val)
+	adapter.stream.WriteRaw("\n")
 	adapter.stream.Flush()
 	return adapter.stream.Error
 }
@@ -124,4 +128,9 @@ func (adapter *Encoder) SetEscapeHTML(escapeHTML bool) {
 	config := adapter.stream.cfg.configBeforeFrozen
 	config.EscapeHTML = escapeHTML
 	adapter.stream.cfg = config.Froze().(*frozenConfig)
+}
+
+// Valid reports whether data is a valid JSON encoding.
+func Valid(data []byte) bool {
+	return ConfigDefault.Valid(data)
 }
