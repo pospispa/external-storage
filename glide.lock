@@ -170,6 +170,9 @@ imports:
   - openstack/networking/v2/extensions/security/groups
   - openstack/networking/v2/extensions/security/rules
   - openstack/networking/v2/ports
+  - openstack/sharedfilesystems/apiversions
+  - openstack/sharedfilesystems/v2/shares
+  - openstack/sharedfilesystems/v2/shares/testing
   - openstack/utils
   - pagination
 - name: github.com/gregjones/httpcache
@@ -613,6 +616,7 @@ imports:
   - pkg/capabilities
   - pkg/cloudprovider
   - pkg/controller
+  - pkg/controller/volume/persistentvolume
   - pkg/credentialprovider
   - pkg/credentialprovider/aws
   - pkg/features
