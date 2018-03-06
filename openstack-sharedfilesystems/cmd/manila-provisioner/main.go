@@ -89,17 +89,17 @@ func (p *manilaProvisioner) Provision(pvc controller.VolumeOptions) (*v1.Persist
 	var createdShare shares.Share
 	var createReq shares.CreateOpts
 	if createReq, err = sharedfilesystems.PrepareCreateRequest(pvc, devMockGetAllZones); err != nil {
-		return nil, fmt.Errorf("failed to create Create Request: (%v)", err)
+		return nil, fmt.Errorf("failed to create Create Request: %v", err)
 	}
 	glog.V(4).Infof("successfully created a share Create Request: %v", createReq)
 	var createReqResponse *shares.Share
 	if createReqResponse, err = shares.Create(client, createReq).Extract(); err != nil {
-		return nil, fmt.Errorf("failed to create a share: (%v)", err)
+		return nil, fmt.Errorf("failed to create a share: %v", err)
 	}
 	glog.V(3).Infof("successfully created a share: (%v)", createReqResponse)
 	createdShare = *createReqResponse
 	if err = sharedfilesystems.WaitTillAvailable(client, createdShare.ID); err != nil {
-		errMsg := fmt.Errorf("waiting for the share %q to become created failed: (%v)", createdShare.ID, err)
+		errMsg := fmt.Errorf("waiting for the share %q to become created failed: %v", createdShare.ID, err)
 		glog.Errorf("%v", errMsg)
 		if resultingErr := deleteShare(client, createdShare.ID); resultingErr != nil {
 			return nil, resultingErr
@@ -114,7 +114,7 @@ func (p *manilaProvisioner) Provision(pvc controller.VolumeOptions) (*v1.Persist
 	grantAccessReq.AccessLevel = "rw"
 	var grantAccessReqResponse *shares.AccessRight
 	if grantAccessReqResponse, err = shares.GrantAccess(client, createdShare.ID, grantAccessReq).Extract(); err != nil {
-		errMsg := fmt.Errorf("failed to grant access to the share %q: (%v)", createdShare.ID, err)
+		errMsg := fmt.Errorf("failed to grant access to the share %q: %v", createdShare.ID, err)
 		glog.Errorf("%v", errMsg)
 		if resultingErr := deleteShare(client, createdShare.ID); resultingErr != nil {
 			return nil, resultingErr
@@ -127,7 +127,7 @@ func (p *manilaProvisioner) Provision(pvc controller.VolumeOptions) (*v1.Persist
 	var chosenLocation shares.ExportLocation
 	var getExportLocationsReqResponse []shares.ExportLocation
 	if getExportLocationsReqResponse, err = shares.GetExportLocations(client, createdShare.ID).Extract(); err != nil {
-		errMsg := fmt.Errorf("failed to get export locations for the share %q: (%v)", createdShare.ID, err)
+		errMsg := fmt.Errorf("failed to get export locations for the share %q: %v", createdShare.ID, err)
 		glog.Errorf("%v", errMsg)
 		if resultingErr := deleteShare(client, createdShare.ID); resultingErr != nil {
 			return nil, resultingErr
@@ -190,17 +190,17 @@ func createManilaV2Client() *gophercloud.ServiceClient {
 	glog.V(1).Infof("successfully read options from environment variables: OS_AUTH_URL(%q), OS_USERNAME/OS_USERID(%q/%q), OS_TENANT_NAME/OS_TENANT_ID(%q,%q), OS_DOMAIN_NAME/OS_DOMAIN_ID(%q,%q)", authOpts.IdentityEndpoint, authOpts.Username, authOpts.UserID)
 	provider, err := openstack.AuthenticatedClient(authOpts)
 	if err != nil {
-		glog.Fatalf("authentication failed: (%v)", err)
+		glog.Fatalf("authentication failed: %v", err)
 	}
 	glog.V(4).Infof("successfully created provider client: (%v)", provider)
 	client, err := openstack.NewSharedFileSystemV2(provider, gophercloud.EndpointOpts{Region: regionName})
 	if err != nil {
-		glog.Fatalf("failed to create Manila v2 client: (%v)", err)
+		glog.Fatalf("failed to create Manila v2 client: %v", err)
 	}
 	client.Microversion = "2.21"
 	serverVer, err := apiversions.Get(client, "v2").Extract()
 	if err != nil {
-		glog.Fatalf("failed to get Manila v2 API min/max microversions: (%v)", err)
+		glog.Fatalf("failed to get Manila v2 API min/max microversions: %v", err)
 	}
 	glog.V(4).Infof("received server's microvesion data structure: (%v)", serverVer)
 	glog.V(3).Infof("server's min microversion is: %q, max microversion is: %q", serverVer.MinVersion, serverVer.Version)
