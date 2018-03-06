@@ -187,7 +187,7 @@ func createManilaV2Client() *gophercloud.ServiceClient {
 	if err != nil {
 		glog.Fatalf("%v", err)
 	}
-	glog.V(1).Infof("successfully read options from environment variables: (%v)", authOpts)
+	glog.V(1).Infof("successfully read options from environment variables: OS_AUTH_URL(%q), OS_USERNAME/OS_USERID(%q/%q), OS_TENANT_NAME/OS_TENANT_ID(%q,%q), OS_DOMAIN_NAME/OS_DOMAIN_ID(%q,%q)", authOpts.IdentityEndpoint, authOpts.Username, authOpts.UserID)
 	provider, err := openstack.AuthenticatedClient(authOpts)
 	if err != nil {
 		glog.Fatalf("authentication failed: (%v)", err)
