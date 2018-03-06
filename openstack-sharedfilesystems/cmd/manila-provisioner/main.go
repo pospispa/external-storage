@@ -108,10 +108,11 @@ func (p *manilaProvisioner) Provision(pvc controller.VolumeOptions) (*v1.Persist
 	}
 	glog.V(4).Infof("the share %q is now in state created", createdShare.ID)
 
-	var grantAccessReq shares.GrantAccessOpts
-	grantAccessReq.AccessType = "ip"
-	grantAccessReq.AccessTo = "0.0.0.0/0"
-	grantAccessReq.AccessLevel = "rw"
+	grantAccessReq := shares.GrantAccessOpts{
+		AccessType:  "ip",
+		AccessTo:    "0.0.0.0/0",
+		AccessLevel: "rw",
+	}
 	var grantAccessReqResponse *shares.AccessRight
 	if grantAccessReqResponse, err = shares.GrantAccess(client, createdShare.ID, grantAccessReq).Extract(); err != nil {
 		errMsg := fmt.Errorf("failed to grant access to the share %q: %v", createdShare.ID, err)
