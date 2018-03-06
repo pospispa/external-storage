@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Functions in this file shall ideally be moved into the github.com/gophercloud/gophercloud library
+
 package sharedfilesystems
 
 import (
