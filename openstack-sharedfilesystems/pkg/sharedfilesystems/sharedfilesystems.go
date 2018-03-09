@@ -43,6 +43,8 @@ const (
 	ProtocolNFS = "NFS"
 	// ManilaAnnotationShareIDName identifies provisioned Share ID
 	ManilaAnnotationShareIDName = "manila.external-storage.incubator.kubernetes.io/" + "ID"
+	// shareAvailabilityTimeout is a timeout in secs for waiting until a newly created share becomes available.
+	shareAvailabilityTimeout = 120 /* secs */
 )
 
 func getPVCStorageSize(pvc *v1.PersistentVolumeClaim) (int, error) {
@@ -129,8 +131,7 @@ func PrepareCreateRequest(options controller.VolumeOptions, getAllZones func() (
 // - another error occurs: error is returned.
 func WaitTillAvailable(client *gophercloud.ServiceClient, shareID string) error {
 	desiredStatus := "available"
-	timeout := 120 /* secs */
-	return gophercloud.WaitFor(timeout, func() (bool, error) {
+	return gophercloud.WaitFor(shareAvailabilityTimeout, func() (bool, error) {
 		current, err := shares.Get(client, shareID).Extract()
 		if err != nil {
 			return false, err
