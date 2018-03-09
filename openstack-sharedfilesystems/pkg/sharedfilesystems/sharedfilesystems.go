@@ -27,7 +27,6 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubernetes/pkg/controller/volume/persistentvolume"
 	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/util"
@@ -77,7 +76,7 @@ func getPVCStorageSize(pvc *v1.PersistentVolumeClaim) (int, error) {
 // PrepareCreateRequest return:
 // - success: ready to send shared filesystem create request data structure constructed from Persistent Volume Claim and corresponding Storage Class
 // - failure: an error
-func PrepareCreateRequest(options controller.VolumeOptions, getAllZones func() (sets.String, error)) (shares.CreateOpts, error) {
+func PrepareCreateRequest(options controller.VolumeOptions) (shares.CreateOpts, error) {
 	var request shares.CreateOpts
 	var storageSize int
 	var err error
@@ -98,7 +97,7 @@ func PrepareCreateRequest(options controller.VolumeOptions, getAllZones func() (
 		persistentvolume.CloudVolumeCreatedForVolumeNameTag:     request.Name,
 	}
 	request.Metadata = tags
-	isZonesParam := false
+	request.AvailabilityZone = "nova"
 	for index, value := range options.Parameters {
 		switch strings.ToLower(index) {
 		case ZonesSCParamName:
@@ -107,20 +106,11 @@ func PrepareCreateRequest(options controller.VolumeOptions, getAllZones func() (
 				return request, err
 			}
 			request.AvailabilityZone = volume.ChooseZoneForVolume(setOfZones, options.PVC.Name)
-			isZonesParam = true
 		case TypeSCParamName:
 			request.ShareType = value
 		default:
 			return request, fmt.Errorf("invalid parameter %q", index)
 		}
-	}
-	if !isZonesParam {
-		var allAvailableZones sets.String
-		var err error
-		if allAvailableZones, err = getAllZones(); err != nil {
-			return request, err
-		}
-		request.AvailabilityZone = volume.ChooseZoneForVolume(allAvailableZones, options.PVC.Name)
 	}
 	return request, nil
 }

@@ -29,7 +29,6 @@ import (
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
 	sharedfilesystems "github.com/kubernetes-incubator/external-storage/openstack-sharedfilesystems/pkg/sharedfilesystems"
 	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -89,7 +88,7 @@ func (p *manilaProvisioner) Provision(pvc controller.VolumeOptions) (*v1.Persist
 	var err error
 	var createdShare shares.Share
 	var createReq shares.CreateOpts
-	if createReq, err = sharedfilesystems.PrepareCreateRequest(pvc, devMockGetAllZones); err != nil {
+	if createReq, err = sharedfilesystems.PrepareCreateRequest(pvc); err != nil {
 		return nil, fmt.Errorf("failed to create Create Request: %v", err)
 	}
 	glog.V(4).Infof("successfully created a share Create Request: %v", createReq)
@@ -221,9 +220,4 @@ func createManilaV2Client() *gophercloud.ServiceClient {
 	}
 	glog.V(4).Infof("successfully created Manila v2 client: (%v)", client)
 	return client
-}
-
-func devMockGetAllZones() (sets.String, error) {
-	ret := sets.String{"nova": sets.Empty{}}
-	return ret, nil
 }

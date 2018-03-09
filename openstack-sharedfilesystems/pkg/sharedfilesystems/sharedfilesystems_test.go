@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubernetes/pkg/controller/volume/persistentvolume"
 	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/util"
@@ -46,11 +45,6 @@ const (
 	fakeShareTypeName = "default"
 )
 
-func mockGetAllZones() (sets.String, error) {
-	ret := sets.String{"nova1": sets.Empty{}, "nova2": sets.Empty{}, "nova3": sets.Empty{}}
-	return ret, nil
-}
-
 func TestPrepareCreateRequest(t *testing.T) {
 	functionUnderTest := "PrepareCreateRequest"
 
@@ -59,8 +53,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 	pvcNameForSCMultiZoneTestCase := "pvc"
 	expectedResultForSCMultiZoneTestCase := volume.ChooseZoneForVolume(setOfZonesForSCMultiZoneTestCase, pvcNameForSCMultiZoneTestCase)
 	pvcNameForSCNoZonesSpecifiedTestCase := "pvc"
-	allClusterZonesForSCNoZonesSpecifiedTestCase, _ := mockGetAllZones()
-	expectedResultForSCNoZonesSpecifiedTestCase := volume.ChooseZoneForVolume(allClusterZonesForSCNoZonesSpecifiedTestCase, pvcNameForSCNoZonesSpecifiedTestCase)
+	expectedResultForSCNoZonesSpecifiedTestCase := "nova"
 	succCaseStorageSize, _ := resource.ParseQuantity("2G")
 	// First part: want no error
 	succCases := []struct {
@@ -290,7 +283,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 		tags[persistentvolume.CloudVolumeCreatedForClaimNameTag] = succCase.volumeOptions.PVC.Name
 		tags[persistentvolume.CloudVolumeCreatedForVolumeNameTag] = succCase.want.Name
 		succCase.want.Metadata = tags
-		if request, err := PrepareCreateRequest(succCase.volumeOptions, mockGetAllZones); err != nil {
+		if request, err := PrepareCreateRequest(succCase.volumeOptions); err != nil {
 			t.Errorf("Test case %v: %v(%v) RETURNED (%v, %v), WANT (%v, %v)", i, functionUnderTest, succCase.volumeOptions, request, err, succCase.want, nil)
 		} else if !reflect.DeepEqual(request, succCase.want) {
 			t.Errorf("Test case %v: %v(%v) RETURNED (%v, %v), WANT (%v, %v)", i, functionUnderTest, succCase.volumeOptions, request, err, succCase.want, nil)
@@ -388,7 +381,7 @@ func TestPrepareCreateRequest(t *testing.T) {
 		},
 	}
 	for _, errCase := range errCases {
-		if request, err := PrepareCreateRequest(errCase.volumeOptions, mockGetAllZones); err == nil {
+		if request, err := PrepareCreateRequest(errCase.volumeOptions); err == nil {
 			t.Errorf("Test case %q: %v(%v) RETURNED (%v, %v), WANT (%v, %v)", errCase.testCaseName, functionUnderTest, errCase.volumeOptions, request, err, "N/A", "an error")
 		}
 	}
