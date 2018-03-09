@@ -77,42 +77,44 @@ func getPVCStorageSize(pvc *v1.PersistentVolumeClaim) (int, error) {
 // - success: ready to send shared filesystem create request data structure constructed from Persistent Volume Claim and corresponding Storage Class
 // - failure: an error
 func PrepareCreateRequest(options controller.VolumeOptions) (shares.CreateOpts, error) {
-	var request shares.CreateOpts
 	var storageSize int
 	var err error
-	// Currently only the NFS shares are supported, that's why the NFS is hardcoded.
-	request.ShareProto = ProtocolNFS
-	// mandatory parameters
+	// mandatory parameter
 	if storageSize, err = getPVCStorageSize(options.PVC); err != nil {
-		return request, err
+		return shares.CreateOpts{}, err
 	}
-	request.Size = storageSize
 
-	// optional parameters
-	request.Name = "pvc-" + string(options.PVC.UID)
-	tags := make(map[string]string)
-	tags = map[string]string{
-		persistentvolume.CloudVolumeCreatedForClaimNamespaceTag: options.PVC.Namespace,
-		persistentvolume.CloudVolumeCreatedForClaimNameTag:      options.PVC.Name,
-		persistentvolume.CloudVolumeCreatedForVolumeNameTag:     request.Name,
-	}
-	request.Metadata = tags
-	request.AvailabilityZone = "nova"
+	shareType := ""
+	zone := "nova"
 	for index, value := range options.Parameters {
 		switch strings.ToLower(index) {
 		case ZonesSCParamName:
 			setOfZones, err := util.ZonesToSet(value)
 			if err != nil {
-				return request, err
+				return shares.CreateOpts{}, err
 			}
-			request.AvailabilityZone = volume.ChooseZoneForVolume(setOfZones, options.PVC.Name)
+			zone = volume.ChooseZoneForVolume(setOfZones, options.PVC.Name)
 		case TypeSCParamName:
-			request.ShareType = value
+			shareType = value
 		default:
-			return request, fmt.Errorf("invalid parameter %q", index)
+			return shares.CreateOpts{}, fmt.Errorf("invalid parameter %q", index)
 		}
 	}
-	return request, nil
+
+	shareName := "pvc-" + string(options.PVC.UID)
+	// Currently only the NFS shares are supported, that's why the NFS is hardcoded.
+	return shares.CreateOpts{
+		ShareProto: ProtocolNFS,
+		Size:       storageSize,
+		Name:       shareName,
+		ShareType:  shareType,
+		Metadata: map[string]string{
+			persistentvolume.CloudVolumeCreatedForClaimNamespaceTag: options.PVC.Namespace,
+			persistentvolume.CloudVolumeCreatedForClaimNameTag:      options.PVC.Name,
+			persistentvolume.CloudVolumeCreatedForVolumeNameTag:     shareName,
+		},
+		AvailabilityZone: zone,
+	}, nil
 }
 
 // WaitTillAvailable keeps querying Manila API for a share status until it is available. The waiting can:
