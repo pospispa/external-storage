@@ -41,11 +41,8 @@ const (
 	TypeSCParamName = "type"
 	// ProtocolNFS is the NFS shared filesystems protocol
 	ProtocolNFS = "NFS"
-	// ManilaAnnotationName is a string that identifies Manila external provisioner custom data
-	// stored in Persistent Volume annotations
-	ManilaAnnotationName = "manila.external-storage.incubator.kubernetes.io/"
 	// ManilaAnnotationShareIDName identifies provisioned Share ID
-	ManilaAnnotationShareIDName = ManilaAnnotationName + "ID"
+	ManilaAnnotationShareIDName = "manila.external-storage.incubator.kubernetes.io/" + "ID"
 )
 
 func getPVCStorageSize(pvc *v1.PersistentVolumeClaim) (int, error) {
