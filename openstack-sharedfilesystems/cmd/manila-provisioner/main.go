@@ -36,7 +36,8 @@ import (
 )
 
 const (
-	provisionerName = "kubernetes.io/manila"
+	provisionerName                    = "kubernetes.io/manila"
+	minimumSupportedManilaMicroversion = "2.21"
 )
 
 type manilaProvisioner struct {
@@ -196,7 +197,7 @@ func createManilaV2Client() *gophercloud.ServiceClient {
 	if err != nil {
 		glog.Fatalf("failed to create Manila v2 client: %v", err)
 	}
-	client.Microversion = "2.21"
+	client.Microversion = minimumSupportedManilaMicroversion
 	serverVer, err := apiversions.Get(client, "v2").Extract()
 	if err != nil {
 		glog.Fatalf("failed to get Manila v2 API min/max microversions: %v", err)
