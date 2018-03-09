@@ -124,7 +124,6 @@ func (p *manilaProvisioner) Provision(pvc controller.VolumeOptions) (*v1.Persist
 	}
 	glog.V(4).Infof("granted access to the share %q: (%v)", createdShare.ID, grantAccessReqResponse)
 
-	var exportLocations []shares.ExportLocation
 	var chosenLocation shares.ExportLocation
 	var getExportLocationsReqResponse []shares.ExportLocation
 	if getExportLocationsReqResponse, err = shares.GetExportLocations(client, createdShare.ID).Extract(); err != nil {
@@ -136,8 +135,7 @@ func (p *manilaProvisioner) Provision(pvc controller.VolumeOptions) (*v1.Persist
 		return nil, errMsg
 	}
 	glog.V(4).Infof("got export locations for the share %q: (%v)", createdShare.ID, getExportLocationsReqResponse)
-	exportLocations = getExportLocationsReqResponse
-	if chosenLocation, err = sharedfilesystems.ChooseExportLocation(exportLocations); err != nil {
+	if chosenLocation, err = sharedfilesystems.ChooseExportLocation(getExportLocationsReqResponse); err != nil {
 		errMsg := fmt.Errorf("failed to choose an export location for the share %q: %q", createdShare.ID, err.Error())
 		fmt.Printf("%v", errMsg)
 		if resultingErr := deleteShare(client, createdShare.ID); resultingErr != nil {
