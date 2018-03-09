@@ -356,43 +356,40 @@ func TestPrepareCreateRequest(t *testing.T) {
 				Parameters: map[string]string{},
 			},
 		},
+		{
+			testCaseName: "storage size not configured 1",
+			volumeOptions: controller.VolumeOptions{
+				PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+				PVName: fakePVName,
+				PVC: &v1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{Name: "pvc", Namespace: "foo"},
+					Spec:       v1.PersistentVolumeClaimSpec{},
+				},
+				Parameters: map[string]string{},
+			},
+		},
+		{
+			testCaseName: "storage size not configured 2",
+			volumeOptions: controller.VolumeOptions{
+				PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
+				PVName: fakePVName,
+				PVC: &v1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{Name: "pvc", Namespace: "foo"},
+					Spec: v1.PersistentVolumeClaimSpec{
+						Resources: v1.ResourceRequirements{
+							Requests: v1.ResourceList{
+								v1.ResourceCPU: resource.Quantity{},
+							},
+						},
+					},
+				},
+				Parameters: map[string]string{},
+			},
+		},
 	}
 	for _, errCase := range errCases {
 		if request, err := PrepareCreateRequest(errCase.volumeOptions, mockGetAllZones); err == nil {
 			t.Errorf("Test case %q: %v(%v) RETURNED (%v, %v), WANT (%v, %v)", errCase.testCaseName, functionUnderTest, errCase.volumeOptions, request, err, "N/A", "an error")
-		}
-	}
-
-	// Third part: want an error
-	errCasesStorageSizeNotConfigured := []controller.VolumeOptions{
-		{
-			PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
-			PVName: fakePVName,
-			PVC: &v1.PersistentVolumeClaim{
-				ObjectMeta: metav1.ObjectMeta{Name: "pvc", Namespace: "foo"},
-				Spec:       v1.PersistentVolumeClaimSpec{},
-			},
-			Parameters: map[string]string{},
-		},
-		{
-			PersistentVolumeReclaimPolicy: fakeReclaimPolicy,
-			PVName: fakePVName,
-			PVC: &v1.PersistentVolumeClaim{
-				ObjectMeta: metav1.ObjectMeta{Name: "pvc", Namespace: "foo"},
-				Spec: v1.PersistentVolumeClaimSpec{
-					Resources: v1.ResourceRequirements{
-						Requests: v1.ResourceList{
-							v1.ResourceCPU: resource.Quantity{},
-						},
-					},
-				},
-			},
-			Parameters: map[string]string{},
-		},
-	}
-	for _, errCase := range errCasesStorageSizeNotConfigured {
-		if request, err := PrepareCreateRequest(errCase, mockGetAllZones); err == nil {
-			t.Errorf("%v(%v) RETURNED (%v, %v), WANT (%v, %v)", functionUnderTest, errCase, request, err, "N/A", "an error")
 		}
 	}
 }
